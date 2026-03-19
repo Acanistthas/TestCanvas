@@ -4,24 +4,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; background: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding-bottom: 40px; }
-        #canvas-container { position: relative; margin-top: 10px; background: #000; border: 1px solid #333; width: 350px; height: 350px; }
-        canvas { touch-action: none; width: 100%; height: 100%; }
-        
-        .section-title { width: 90%; margin: 20px 0 10px 0; font-size: 14px; color: #0088cc; text-transform: uppercase; font-weight: bold; }
-        
-        .toolbar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 90%; }
-        .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%; background: #1c1c1c; padding: 15px; border-radius: 10px; }
-        
-        .control-group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 12px; color: #aaa; }
-        
-        button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; background: #333; color: white; cursor: pointer; }
-        button.active { background: #0088cc; }
-        select { background: #2a2a2a; color: white; border: 1px solid #444; padding: 10px; border-radius: 8px; }
-        
-        .btn-gen { background: #0088cc; width: 90%; margin-top: 25px; padding: 18px; font-size: 16px; box-shadow: 0 4px 15px rgba(0,136,204,0.3); }
-        #upload-btn { background: #222; border: 2px dashed #444; padding: 40px; width: 80%; margin-top: 20px; text-align: center; border-radius: 15px; }
+        /* Make the canvas container flexible and large */
+        #canvas-viewport {
+            width: 95vw;
+            height: 95vw;
+            max-width: 512px;
+            max-height: 512px;
+            overflow: auto; /* Allows scrolling when zoomed */
+            border: 2px solid #0088cc;
+            background: #000;
+            position: relative;
+            border-radius: 10px;
+            touch-action: none; /* Crucial: stops the page from bouncing */
+        }
+
+        #mainCanvas {
+            transform-origin: top left;
+            transition: transform 0.1s ease-out;
+        }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 90%;
+            margin: 10px 0;
+            background: #1c1c1c;
+            padding: 10px;
+            border-radius: 8px;
+        }
+    </style>
+
+<div class="section-title">Step 1: Paint the Area</div>
+
+<div id="canvas-viewport">
+    <canvas id="mainCanvas"></canvas>
+</div>
+
+<div class="zoom-controls">
+    <span>🔍</span>
+    <input type="range" id="zoomRange" min="1" max="3" step="0.1" value="1" oninput="applyZoom(this.value)">
+    <span id="zoomVal">1x</span>
+</div>
     </style>
 </head>
 <body>
