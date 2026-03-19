@@ -1,24 +1,56 @@
-<div id="upload-container">
+<div class="container">
+    <div id="upload-zone" onclick="document.getElementById('imageLoader').click()">
+        <canvas id="paintCanvas"></canvas>
+        <div id="upload-placeholder">[+] upload photo</div>
+    </div>
     <input type="file" id="imageLoader" accept="image/*" style="display:none;">
-    <div class="upload-box" onclick="document.getElementById('imageLoader').click()">
-        <span>[+] upload photo</span>
+
+    <div class="controls">
+        <p>Adjust parameters to change result:</p>
+        
+        <div class="param-row">
+            <label>Body Type:</label>
+            <select id="bodyType">
+                <option value="slim">Slim</option>
+                <option value="athletic">Athletic</option>
+                <option value="curvy">Curvy</option>
+            </select>
+        </div>
+
+        <div class="param-row">
+            <label>Chest Type:</label>
+            <select id="chestType">
+                <option value="natural">Natural</option>
+                <option value="small">Small</option>
+                <option value="large">Large</option>
+            </select>
+        </div>
+
+        <div class="param-row">
+            <label>Waist Type:</label>
+            <select id="waistType">
+                <option value="standard">Standard</option>
+                <option value="thin">Thin / Snatched</option>
+                <option value="wide">Wide</option>
+            </select>
+        </div>
+
+        <button class="btn-send" onclick="sendData()">GENERATE</button>
+        <button class="btn-clear" onclick="clearCanvas()">Go Back / Clear</button>
     </div>
 </div>
 
 <script>
-    // JavaScript to load the uploaded file onto the canvas
-    const imageLoader = document.getElementById('imageLoader');
-    imageLoader.addEventListener('change', handleImage, false);
+    function sendData() {
+        const body = document.getElementById('bodyType').value;
+        const chest = document.getElementById('chestType').value;
+        const waist = document.getElementById('waistType').value;
+        
+        // Create Mask
+        const maskData = canvas.toDataURL("image/png");
 
-    function handleImage(e) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const img = new Image();
-            img.onload = function() {
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            }
-            img.src = event.target.result;
-        }
-        reader.readAsDataURL(e.target.files[0]);
+        // Combine all data into one string for Python to read
+        const payload = `${maskData}|${body}|${chest}|${waist}`;
+        tg.sendData(payload);
     }
 </script>
