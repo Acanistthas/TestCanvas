@@ -70,29 +70,6 @@
     </div>
 
     <script>
-        img.onload = function() {
-        document.getElementById('upload-btn').style.display = 'none';
-        document.getElementById('editor-ui').style.display = 'flex';
-        
-        const viewport = document.getElementById('viewport');
-        const screenWidth = viewport.clientWidth;
-        
-        // Internal Resolution stays high for the AI
-        const internalW = 1024; 
-        const ratio = internalW / img.width;
-        const internalH = img.height * ratio;
-        
-        [pCanvas, mCanvas].forEach(c => {
-            c.width = internalW;
-            c.height = internalH;
-            // This makes the 1024px image fit inside the phone screen width at 1x
-            c.style.width = screenWidth + "px";
-            c.style.height = (internalH * (screenWidth / internalW)) + "px";
-        });
-    
-        pCtx.drawImage(img, 0, 0, internalW, internalH);
-        saveState();
-    };
         const tg = window.Telegram.WebApp;
         const pCanvas = document.getElementById('photoCanvas');
         const mCanvas = document.getElementById('maskCanvas');
