@@ -33,12 +33,15 @@
         <div style="width: 40px; height: 5px; background: #444; border-radius: 10px; margin: 0 auto 15px;"></div>
         
         <div class="param-group">
-            <span class="param-label">Target Style</span>
+            <span class="param-label">Dress Type</span>
             <div class="chip-group">
                 <div class="chip selected" onclick="selectChip(this, 'style')">Nude</div>
+                <div class="chip" onclick="selectChip(this, 'style')">Tattooed</div>
                 <div class="chip" onclick="selectChip(this, 'style')">Bikini</div>
                 <div class="chip" onclick="selectChip(this, 'style')">Lingerie</div>
-                <div class="chip" onclick="selectChip(this, 'style')">Tattooed</div>
+                <div class="chip" onclick="selectChip(this, 'style')">Swimsuit</div>
+                <div class="chip" onclick="selectChip(this, 'style')">Bodysuit</div>
+                
             </div>
         </div>
 
@@ -46,25 +49,30 @@
             <span class="param-label">Body Type</span>
             <div class="chip-group">
                 <div class="chip selected" onclick="selectChip(this, 'body')">Slim</div>
+                <div class="chip" onclick="selectChip(this, 'body')">Normal</div>
                 <div class="chip" onclick="selectChip(this, 'body')">Athletic</div>
-                <div class="chip" onclick="selectChip(this, 'body')">Curvy</div>
-                <div class="chip" onclick="selectChip(this, 'body')">Fit</div>
+                <div class="chip" onclick="selectChip(this, 'body')">Fat</div>
             </div>
         </div>
 
         <div class="param-group">
-            <span class="param-label">Chest Size</span>
+            <span class="param-label">Breast Size</span>
             <div class="chip-group">
-                <div class="chip selected" onclick="selectChip(this, 'chest')">Natural</div>
-                <div class="chip" onclick="selectChip(this, 'chest')">Small</div>
-                <div class="chip" onclick="selectChip(this, 'chest')">Large</div>
+                <div class="chip selected" onclick="selectChip(this, 'chest')">Small</div>
+                <div class="chip" onclick="selectChip(this, 'chest')">Medium</div>
+                <div class="chip" onclick="selectChip(this, 'chest')">Big</div>
                 <div class="chip" onclick="selectChip(this, 'chest')">Huge</div>
             </div>
         </div>
-
+        
         <div class="param-group">
-            <span class="param-label">AI Intensity</span>
-            <input type="range" id="denoiseRange" min="0.3" max="0.8" step="0.05" value="0.55" style="width:100%">
+            <span class="param-label">Vagina Type</span>
+            <div class="chip-group">
+                <div class="chip selected" onclick="selectChip(this, 'chest')">Normal</div>
+                <div class="chip" onclick="selectChip(this, 'chest')">Hairy</div>
+                <div class="chip" onclick="selectChip(this, 'chest')">Shaved</div>
+                <div class="chip" onclick="selectChip(this, 'chest')">Brazillian</div>
+            </div>
         </div>
         
         <button class="min-btn" style="width:100%; background:#0088cc; padding: 15px; color: white;" onclick="toggleDrawer(false)">APPLY SETTINGS</button>
