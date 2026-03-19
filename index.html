@@ -1,114 +1,49 @@
 <!DOCTYPE html>
 <html>
-<div class="toolbar">
-    <button id="moveBtn" onclick="setMode('move')">🖐️ Move/Zoom</button>
-    <button id="brushBtn" class="active" onclick="setMode('brush')">🖌️ Brush</button>
-    <button id="eraseBtn" onclick="setMode('erase')">🧽 Eraser</button>
-</div>
-}
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Make the canvas container flexible and large */
-        #canvas-viewport {
-            width: 95vw;
-            height: 80vh; /* Increased height for better scrolling */
-            margin: 10px auto;
-            border: 2px solid #0088cc;
-            background: #000;
-            position: relative;
-            overflow: auto; /* This allows the scrollbars to appear when zoomed */
-            border-radius: 10px;
-            touch-action: none; 
-        }
-    
-        /* Both canvases must be the exact same size and stack perfectly */
-        .drawing-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            transform-origin: top left;
-            transition: transform 0.1s ease-out;
-        }
-    </style>
-
-<div class="section-title">Step 1: Paint the Area</div>
-
-<div id="canvas-viewport">
-    <canvas id="photoCanvas" class="drawing-layer"></canvas>
-    <canvas id="maskCanvas" class="drawing-layer"></canvas>
-</div>
-
-<div class="zoom-controls">
-    <span>🔍</span>
-    <input type="range" id="zoomRange" min="1" max="3" step="0.1" value="1" oninput="applyZoom(this.value)">
-    <span id="zoomVal">1x</span>
-</div>
+        body { margin: 0; background: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
+        #viewport { width: 95vw; height: 60vh; margin-top: 10px; border: 2px solid #0088cc; position: relative; overflow: auto; background: #000; border-radius: 10px; touch-action: none; }
+        canvas { position: absolute; top: 0; left: 0; transform-origin: top left; }
+        .toolbar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 90%; margin-top: 10px; }
+        button { padding: 12px; border: none; border-radius: 8px; background: #333; color: white; font-weight: bold; cursor: pointer; }
+        button.active { background: #0088cc; border: 2px solid white; }
+        .controls { width: 90%; margin: 15px 0; background: #1c1c1c; padding: 15px; border-radius: 10px; display: none; }
+        #upload-btn { background: #222; border: 2px dashed #444; padding: 40px; width: 80%; margin-top: 50px; text-align: center; border-radius: 15px; }
+        .btn-gen { background: #0088cc; width: 90%; padding: 18px; margin-top: 10px; font-size: 16px; border-radius: 10px; }
     </style>
 </head>
 <body>
 
     <div id="upload-btn" onclick="document.getElementById('fileInput').click()">
-        <strong>[+] UPLOAD PHOTO</strong><br><small>Tap to start painting</small>
+        <strong>[+] UPLOAD PHOTO</strong><br><small>1440x1800 supported</small>
     </div>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
 
-    <div id="editor-ui" style="display:none; width: 100%; display: flex; flex-direction: column; align-items: center;">
-        <div id="canvas-container">
-            <canvas id="mainCanvas"></canvas>
+    <div id="editor-ui" style="display:none; width: 100%; flex-direction: column; align-items: center;">
+        <div id="viewport">
+            <canvas id="photoCanvas"></canvas>
+            <canvas id="maskCanvas"></canvas>
         </div>
 
-        <div class="section-title">Drawing Tools</div>
         <div class="toolbar">
+            <button id="moveBtn" onclick="setMode('move')">🖐️ Move</button>
             <button id="brushBtn" class="active" onclick="setMode('brush')">🖌️ Brush</button>
             <button id="eraseBtn" onclick="setMode('erase')">🧽 Eraser</button>
-            <button onclick="undo()">↩️ Undo</button>
-        </div>
-        
-        <div style="width:90%; margin: 15px 0;">
-            <label>Brush Size</label>
-            <input type="range" id="sizeRange" min="5" max="60" value="25" style="width:100%">
         </div>
 
-        <div class="section-title">Body Parameters</div>
-        <div class="params-grid">
-            <div class="control-group">
-                <label>Dress Type</label>
-                <select id="dressType">
-                    <option value="nude">Nude</option>
-                    <option value="nudewithtattoo">Nude with Tattoo</option>
-                    <option value="bikini">Bikini</option>
-                    <option value="lingerie">Lingerie</option>
-                    <option value="swimsuit">Swimsuit</option>
-                    <option value="bodysuit">Bodysuit</option>
-                </select>
-            </div>
-            <div class="control-group">
-                <label>Body Type</label>
-                <select id="bodyType">
-                    <option value="slim">Slim</option>
-                    <option value="normal">Normal</option>
-                    <option value="athletic">Athletic</option>
-                    <option value="fat">Fat</option>
-                </select>
-            </div>
-            <div class="control-group">
-                <label>Breast</label>
-                <select id="breastType">
-                    <option value="natural">Small</option>
-                    <option value="medium">Medium</option>
-                    <option value="big">Big</option>
-                    <option value="huge">Huge</option>
-                </select>
-            </div>
-            <div class="control-group">
-                <label>Vagina</label>
-                <select id="vaginaType">
-                    <option value="hairy">Hairy</option>
-                    <option value="shaved">Shaved</option>
-                    <option value="brazillian">Brazillian</option>
-                </select>
+        <div class="controls" id="mainControls" style="display:block">
+            <label>Zoom: <span id="zVal">1x</span></label>
+            <input type="range" min="1" max="4" step="0.1" value="1" style="width:100%" oninput="updateZoom(this.value)">
+            
+            <label>Brush Size</label>
+            <input type="range" id="sizeRange" min="5" max="80" value="30" style="width:100%">
+
+            <div style="margin-top:10px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button onclick="undo()" style="background:#444">↩️ Undo</button>
+                <button onclick="clearMask()" style="background:#600">🗑️ Clear</button>
             </div>
         </div>
 
@@ -116,153 +51,94 @@
     </div>
 
     <script>
-        .nav-mode {
-        touch-action: auto !important; 
-        pointer-events: none; /* Let the touch pass through to the viewport for scrolling */
-    }
         const tg = window.Telegram.WebApp;
         const pCanvas = document.getElementById('photoCanvas');
         const mCanvas = document.getElementById('maskCanvas');
         const pCtx = pCanvas.getContext('2d');
         const mCtx = mCanvas.getContext('2d');
-        
-        let drawing = false;
-        let mode = 'brush';
-        let currentZoom = 1;
-        let history = [];
-        
-        // 1. Load Image and Fit to 768px Width (Scrollable Height)
-        document.getElementById('fileInput').onchange = function(e) {
+
+        let drawing = false, mode = 'brush', zoom = 1, history = [];
+        let lastX, lastY; // To fix the "dots" issue
+
+        document.getElementById('fileInput').onchange = (e) => {
             const reader = new FileReader();
-            reader.onload = function(event) {
+            reader.onload = (ev) => {
                 const img = new Image();
-                img.onload = function() {
+                img.onload = () => {
                     document.getElementById('upload-btn').style.display = 'none';
                     document.getElementById('editor-ui').style.display = 'flex';
-        
-                    // We fix the width at 768, but let the height be dynamic based on the photo
+                    
                     const ratio = 768 / img.width;
-                    const finalW = 768;
-                    const finalH = img.height * ratio;
-        
-                    [pCanvas, mCanvas].forEach(c => {
-                        c.width = finalW;
-                        c.height = finalH;
-                    });
-        
-                    pCtx.drawImage(img, 0, 0, finalW, finalH);
+                    const w = 768, h = img.height * ratio;
+                    
+                    [pCanvas, mCanvas].forEach(c => { c.width = w; c.height = h; });
+                    pCtx.drawImage(img, 0, 0, w, h);
                     saveState();
-                }
-                img.src = event.target.result;
-            }
+                };
+                img.src = ev.target.result;
+            };
             reader.readAsDataURL(e.target.files[0]);
         };
-        
-        // 2. Zoom Functionality
-        function applyZoom(val) {
-            currentZoom = val;
-            document.getElementById('zoomVal').innerText = val + "x";
-            // Apply zoom to BOTH layers simultaneously
-            pCanvas.style.transform = `scale(${val})`;
-            mCanvas.style.transform = `scale(${val})`;
+
+        function updateZoom(v) {
+            zoom = v;
+            document.getElementById('zVal').innerText = v + "x";
+            pCanvas.style.transform = `scale(${v})`;
+            mCanvas.style.transform = `scale(${v})`;
+            // Allow native scrolling when zoomed
+            document.getElementById('viewport').style.touchAction = v > 1 ? 'auto' : 'none';
         }
-        
-        // 3. Drawing Logic (Targeting the Mask Layer)
-        function draw(e) {
-            if (!drawing || mode === 'move') return; // Don't draw in move mode
+
+        function setMode(m) {
+            mode = m;
+            document.getElementById('moveBtn').className = m === 'move' ? 'active' : '';
+            document.getElementById('brushBtn').className = m === 'brush' ? 'active' : '';
+            document.getElementById('eraseBtn').className = m === 'erase' ? 'active' : '';
+            mCanvas.style.pointerEvents = m === 'move' ? 'none' : 'auto';
+        }
+
+        mCanvas.onpointerdown = (e) => {
+            if (mode === 'move') return;
+            drawing = true;
+            saveState();
+            const rect = mCanvas.getBoundingClientRect();
+            lastX = (e.clientX - rect.left) * (mCanvas.width / rect.width);
+            lastY = (e.clientY - rect.top) * (mCanvas.height / rect.height);
+        };
+
+        mCanvas.onpointermove = (e) => {
+            if (!drawing || mode === 'move') return;
             const rect = mCanvas.getBoundingClientRect();
             const x = (e.clientX - rect.left) * (mCanvas.width / rect.width);
             const y = (e.clientY - rect.top) * (mCanvas.height / rect.height);
-        
-            ctx.lineWidth = document.getElementById('sizeRange').value;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round'; // THIS makes it a smooth line instead of dots
-        
-            if (mode === 'brush') {
-                mCtx.globalCompositeOperation = 'source-over';
-                mCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)'; // Paint white
-            } else {
-                mCtx.globalCompositeOperation = 'destination-out'; // Erase only the paint
-            }
-        
+
+            mCtx.lineWidth = document.getElementById('sizeRange').value;
+            mCtx.lineCap = 'round';
+            mCtx.lineJoin = 'round';
+            mCtx.globalCompositeOperation = mode === 'brush' ? 'source-over' : 'destination-out';
+            mCtx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+
+            mCtx.beginPath();
+            mCtx.moveTo(lastX, lastY);
             mCtx.lineTo(x, y);
             mCtx.stroke();
-            mCtx.beginPath();
-            mCtx.moveTo(x, y);
-        }
-        
-        // 4. Input Listeners
-        mCanvas.onpointerdown = (e) => { 
-            // If not zoomed, we draw. If zoomed, you can still draw or scroll.
-            drawing = true; 
-            saveState(); 
-            draw(e); 
+            
+            [lastX, lastY] = [x, y];
         };
-        mCanvas.onpointerup = () => { drawing = false; mCtx.beginPath(); };
-        mCanvas.onpointermove = draw;
-        
-        function setMode(m) { 
-            mode = m;
-            const mCanvas = document.getElementById('maskCanvas');
-            
-            // Reset active classes
-            document.querySelectorAll('.toolbar button').forEach(btn => btn.classList.remove('active'));
-            
-            if (m === 'move') {
-                document.getElementById('moveBtn').classList.add('active');
-                mCanvas.style.pointerEvents = 'none'; // DISABLE DRAWING
-                tg.MainButton.setText("SWITCH TO BRUSH TO PAINT"); 
-            } else {
-                document.getElementById(m + 'Btn').classList.add('active');
-                mCanvas.style.pointerEvents = 'auto'; // ENABLE DRAWING
-            }
-        }
-        
-        function applyZoom(val) {
-            currentZoom = val;
-            document.getElementById('zoomVal').innerText = val + "x";
-            canvas.style.transform = `scale(${val})`;
-        }
-        
-        function saveState() {
-            if (history.length > 15) history.shift();
-            history.push(canvas.toDataURL());
-        }
-        
-        function undo() {
-            if (history.length > 1) {
-                history.pop();
-                let img = new Image();
-                img.onload = () => {
-                    ctx.clearRect(0, 0, 768, 768);
-                    ctx.drawImage(img, 0, 0);
-                };
-                img.src = history[history.length - 1];
-            }
-        }
-        
-        // --- SECTION 4: TOUCH LISTENERS ---
-        canvas.onpointerdown = (e) => { drawing = true; saveState(); draw(e); };
-        canvas.onpointerup = () => { drawing = false; ctx.beginPath(); };
-        canvas.onpointermove = draw;
-        
-        // --- SECTION 5: SEND TO BOT ---
+
+        window.onpointerup = () => drawing = false;
+
+        function saveState() { history.push(mCanvas.toDataURL()); if(history.length > 10) history.shift(); }
+        function undo() { if(history.length > 1) { history.pop(); let i = new Image(); i.onload = () => { mCtx.clearRect(0,0,768,mCanvas.height); mCtx.drawImage(i,0,0); }; i.src = history[history.length-1]; } }
+        function clearMask() { mCtx.clearRect(0,0,768,mCanvas.height); saveState(); }
+
         function sendToBot() {
-            const finalCanvas = document.createElement('canvas');
-            finalCanvas.width = 768; finalCanvas.height = 768;
-            const fCtx = finalCanvas.getContext('2d');
-            
-            // Draw photo, then draw mask on top
-            fCtx.drawImage(photoCanvas, 0, 0);
-            fCtx.drawImage(maskCanvas, 0, 0);
-            
-            const dress = document.getElementById('dressType').value;
-            const body = document.getElementById('bodyType').value;
-            const breast = document.getElementById('breastType').value;
-            const vagina = document.getElementById('vaginaType').value;
-            
-            const dataString = `${finalCanvas.toDataURL("image/png")}|${dress}|${body}|${breast}|${vagina}`;
-            tg.sendData(dataString);
+            const final = document.createElement('canvas');
+            final.width = 768; final.height = mCanvas.height;
+            const fCtx = final.getContext('2d');
+            fCtx.drawImage(pCanvas, 0, 0);
+            fCtx.drawImage(mCanvas, 0, 0);
+            tg.sendData(final.toDataURL("image/png"));
         }
     </script>
 </body>
