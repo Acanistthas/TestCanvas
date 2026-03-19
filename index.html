@@ -7,42 +7,31 @@
         /* Make the canvas container flexible and large */
         #canvas-viewport {
             width: 95vw;
-            height: 95vw;
-            max-width: 500px; /* How big it looks on screen */
-            max-height: 500px;
+            height: 80vh; /* Increased height for better scrolling */
             margin: 10px auto;
-            overflow: auto; 
             border: 2px solid #0088cc;
             background: #000;
             position: relative;
+            overflow: auto; /* This allows the scrollbars to appear when zoomed */
             border-radius: 10px;
-            touch-action: none;
+            touch-action: none; 
         }
-
-        #mainCanvas {
-            width: 100%;
-            height: 100%;
-            display: block;
+    
+        /* Both canvases must be the exact same size and stack perfectly */
+        .drawing-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
             transform-origin: top left;
-        }
-
-        .zoom-controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            width: 90%;
-            margin: 10px 0;
-            background: #1c1c1c;
-            padding: 10px;
-            border-radius: 8px;
+            transition: transform 0.1s ease-out;
         }
     </style>
 
 <div class="section-title">Step 1: Paint the Area</div>
 
 <div id="canvas-viewport">
-    <canvas id="photoCanvas" style="position: absolute; top: 0; left: 0; z-index: 1;"></canvas>
-    <canvas id="maskCanvas" style="position: absolute; top: 0; left: 0; z-index: 2;"></canvas>
+    <canvas id="photoCanvas" class="drawing-layer"></canvas>
+    <canvas id="maskCanvas" class="drawing-layer"></canvas>
 </div>
 
 <div class="zoom-controls">
@@ -121,57 +110,71 @@
     </div>
 
     <script>
-        const photoCanvas = document.getElementById('photoCanvas');
-        const pCtx = photoCanvas.getContext('2d');
-        const maskCanvas = document.getElementById('maskCanvas');
-        const mCtx = maskCanvas.getContext('2d');
+        const tg = window.Telegram.WebApp;
+        const pCanvas = document.getElementById('photoCanvas');
+        const mCanvas = document.getElementById('maskCanvas');
+        const pCtx = pCanvas.getContext('2d');
+        const mCtx = mCanvas.getContext('2d');
         
+        let drawing = false;
+        let mode = 'brush';
+        let currentZoom = 1;
+        let history = [];
+        
+        // 1. Load Image and Fit to 768px Width (Scrollable Height)
         document.getElementById('fileInput').onchange = function(e) {
             const reader = new FileReader();
             reader.onload = function(event) {
-                bgImage = new Image();
-                bgImage.onload = function() {
+                const img = new Image();
+                img.onload = function() {
                     document.getElementById('upload-btn').style.display = 'none';
                     document.getElementById('editor-ui').style.display = 'flex';
-                    
-                    // Set both to 768x768
-                    [photoCanvas, maskCanvas].forEach(c => { c.width = 768; c.height = 768; });
         
-                    // Fit the 1440x1800 photo into 768x768 without cropping
-                    const ratio = Math.min(768 / bgImage.width, 768 / bgImage.height);
-                    const x = (768 - bgImage.width * ratio) / 2;
-                    const y = (768 - bgImage.height * ratio) / 2;
+                    // We fix the width at 768, but let the height be dynamic based on the photo
+                    const ratio = 768 / img.width;
+                    const finalW = 768;
+                    const finalH = img.height * ratio;
         
-                    pCtx.fillStyle = "black";
-                    pCtx.fillRect(0, 0, 768, 768);
-                    pCtx.drawImage(bgImage, x, y, bgImage.width * ratio, bgImage.height * ratio);
-                    
-                    saveState(); 
+                    [pCanvas, mCanvas].forEach(c => {
+                        c.width = finalW;
+                        c.height = finalH;
+                    });
+        
+                    pCtx.drawImage(img, 0, 0, finalW, finalH);
+                    saveState();
                 }
-                bgImage.src = event.target.result;
+                img.src = event.target.result;
             }
             reader.readAsDataURL(e.target.files[0]);
         };
-                
-        // --- SECTION 2: DRAWING & BRUSH LOGIC ---
-        // This handles the white paint on the 768px canvas
+        
+        // 2. Zoom Functionality
+        function applyZoom(val) {
+            currentZoom = val;
+            document.getElementById('zoomVal').innerText = val + "x";
+            // Apply zoom to BOTH layers simultaneously
+            pCanvas.style.transform = `scale(${val})`;
+            mCanvas.style.transform = `scale(${val})`;
+        }
+        
+        // 3. Drawing Logic (Targeting the Mask Layer)
         function draw(e) {
             if (!drawing) return;
-            const rect = maskCanvas.getBoundingClientRect();
-            const scale = 768 / rect.width;
-        
-            const x = (e.clientX - rect.left) * scale;
-            const y = (e.clientY - rect.top) * scale;
-        
-            mCtx.lineWidth = document.getElementById('sizeRange').value * (768 / 500);
-            mCtx.lineCap = 'round';
+            const rect = mCanvas.getBoundingClientRect();
             
+            // Math to ensure brush stays under finger during zoom
+            const x = (e.clientX - rect.left) * (mCanvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (mCanvas.height / rect.height);
+        
+            mCtx.lineWidth = document.getElementById('sizeRange').value * (768 / 400);
+            mCtx.lineCap = 'round';
+            mCtx.lineJoin = 'round';
+        
             if (mode === 'brush') {
                 mCtx.globalCompositeOperation = 'source-over';
-                mCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)'; // White paint
+                mCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)'; // Paint white
             } else {
-                // This now only erases the PAINT, not the photo!
-                mCtx.globalCompositeOperation = 'destination-out'; 
+                mCtx.globalCompositeOperation = 'destination-out'; // Erase only the paint
             }
         
             mCtx.lineTo(x, y);
@@ -180,11 +183,20 @@
             mCtx.moveTo(x, y);
         }
         
-        // --- SECTION 3: UTILS (Undo, Zoom, Mode) ---
+        // 4. Input Listeners
+        mCanvas.onpointerdown = (e) => { 
+            // If not zoomed, we draw. If zoomed, you can still draw or scroll.
+            drawing = true; 
+            saveState(); 
+            draw(e); 
+        };
+        mCanvas.onpointerup = () => { drawing = false; mCtx.beginPath(); };
+        mCanvas.onpointermove = draw;
+        
         function setMode(m) { 
             mode = m; 
-            document.getElementById('brushBtn').classList.toggle('active', mode === 'brush');
-            document.getElementById('eraseBtn').classList.toggle('active', mode === 'erase');
+            document.getElementById('brushBtn').className = (m === 'brush' ? 'active' : '');
+            document.getElementById('eraseBtn').className = (m === 'erase' ? 'active' : '');
         }
         
         function applyZoom(val) {
