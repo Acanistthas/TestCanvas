@@ -257,7 +257,15 @@
             const fCtx = final.getContext('2d');
             fCtx.drawImage(pCanvas, 0, 0);
             fCtx.drawImage(mCanvas, 0, 0);
-            tg.sendData(final.toDataURL("image/png"));
+        
+            const data = {
+                image: final.toDataURL("image/png"),
+                body_type: selectedBody,
+                intensity: document.getElementById('denoiseRange').value
+            };
+        
+            // Telegram can send strings easily
+            tg.sendData(JSON.stringify(data));
         }
     </script>
 </body>
