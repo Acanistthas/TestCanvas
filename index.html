@@ -8,19 +8,22 @@
         #canvas-viewport {
             width: 95vw;
             height: 95vw;
-            max-width: 768px;
-            max-height: 768px;
-            overflow: auto; /* Allows scrolling when zoomed */
+            max-width: 500px; /* How big it looks on screen */
+            max-height: 500px;
+            margin: 10px auto;
+            overflow: auto; 
             border: 2px solid #0088cc;
             background: #000;
             position: relative;
             border-radius: 10px;
-            touch-action: none; /* Crucial: stops the page from bouncing */
+            touch-action: none;
         }
 
         #mainCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
             transform-origin: top left;
-            transition: transform 0.1s ease-out;
         }
 
         .zoom-controls {
@@ -120,46 +123,123 @@
         const tg = window.Telegram.WebApp;
         const canvas = document.getElementById('mainCanvas');
         const ctx = canvas.getContext('2d');
+        
         let drawing = false;
         let mode = 'brush';
         let history = [];
         let bgImage = null;
-
-        // Image loading logic stays the same...
+        let currentZoom = 1;
+        
+        // --- SECTION 1: THE PHOTO LOADER (reader.onload) ---
+        // This triggers the moment the user picks a file
         document.getElementById('fileInput').onchange = function(e) {
             const reader = new FileReader();
             reader.onload = function(event) {
                 bgImage = new Image();
                 bgImage.onload = function() {
+                    // Hide the upload button, show the editor
                     document.getElementById('upload-btn').style.display = 'none';
                     document.getElementById('editor-ui').style.display = 'flex';
-                    canvas.width = 512;
-                    canvas.height = 512;
-                    ctx.drawImage(bgImage, 0, 0, 512, 512);
-                    saveState();
+                    
+                    // 1. SET THE RESOLUTION TO 768x768
+                    canvas.width = 768;
+                    canvas.height = 768;
+        
+                    // 2. THE "NO GAP" MATH (Center Crop/Fill)
+                    // This ensures the photo fills the 768x768 square completely
+                    const scale = Math.max(canvas.width / bgImage.width, canvas.height / bgImage.height);
+                    const x = (canvas.width / 2) - (bgImage.width / 2) * scale;
+                    const y = (canvas.height / 2) - (bgImage.height / 2) * scale;
+        
+                    // 3. DRAW THE PHOTO
+                    ctx.drawImage(bgImage, x, y, bgImage.width * scale, bgImage.height * scale);
+                    saveState(); // Save this as the "Base" for Undo
                 }
                 bgImage.src = event.target.result;
             }
             reader.readAsDataURL(e.target.files[0]);
         };
-
-        // Brush/Undo logic stays the same...
-        function setMode(m) { mode = m; /* update button classes */ }
-        function saveState() { history.push(canvas.toDataURL()); }
         
+        // --- SECTION 2: DRAWING & BRUSH LOGIC ---
+        // This handles the white paint on the 768px canvas
+        function draw(e) {
+            if (!drawing) return;
+            
+            // Get the size of the canvas as it appears on the phone screen
+            const rect = canvas.getBoundingClientRect();
+            
+            // Convert screen touches to the internal 768px coordinates
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+        
+            // Apply the math to find exactly where the finger is
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+        
+            // Brush settings
+            ctx.lineWidth = document.getElementById('sizeRange').value * (768 / 500); 
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            if (mode === 'brush') {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; // Semi-transparent white
+            } else {
+                ctx.globalCompositeOperation = 'destination-out'; // Eraser mode
+            }
+        
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+        
+        // --- SECTION 3: UTILS (Undo, Zoom, Mode) ---
+        function setMode(m) { 
+            mode = m; 
+            document.getElementById('brushBtn').classList.toggle('active', mode === 'brush');
+            document.getElementById('eraseBtn').classList.toggle('active', mode === 'erase');
+        }
+        
+        function applyZoom(val) {
+            currentZoom = val;
+            document.getElementById('zoomVal').innerText = val + "x";
+            canvas.style.transform = `scale(${val})`;
+        }
+        
+        function saveState() {
+            if (history.length > 15) history.shift();
+            history.push(canvas.toDataURL());
+        }
+        
+        function undo() {
+            if (history.length > 1) {
+                history.pop();
+                let img = new Image();
+                img.onload = () => {
+                    ctx.clearRect(0, 0, 768, 768);
+                    ctx.drawImage(img, 0, 0);
+                };
+                img.src = history[history.length - 1];
+            }
+        }
+        
+        // --- SECTION 4: TOUCH LISTENERS ---
+        canvas.onpointerdown = (e) => { drawing = true; saveState(); draw(e); };
+        canvas.onpointerup = () => { drawing = false; ctx.beginPath(); };
+        canvas.onpointermove = draw;
+        
+        // --- SECTION 5: SEND TO BOT ---
         function sendToBot() {
             const dress = document.getElementById('dressType').value;
             const body = document.getElementById('bodyType').value;
             const breast = document.getElementById('breastType').value;
             const vagina = document.getElementById('vaginaType').value;
             
-            
-            // Generate data string: image|body|chest|waist|outfit
+            // The dataString sent back to your Python script
             const dataString = `${canvas.toDataURL("image/png")}|${dress}|${body}|${breast}|${vagina}`;
             tg.sendData(dataString);
         }
-        
-        // Canvas touch listeners here... (same as previous version)
     </script>
 </body>
 </html>
