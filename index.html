@@ -5,8 +5,27 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; background: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
-        #viewport { width: 95vw; height: 60vh; margin-top: 10px; border: 2px solid #0088cc; position: relative; overflow: auto; background: #000; border-radius: 10px; touch-action: none; }
-        canvas { position: absolute; top: 0; left: 0; transform-origin: top left; }
+        #viewport {
+            width: 95vw;
+            height: 65vh; /* Take up more vertical space on mobile */
+            margin: 10px auto;
+            border: 2px solid #0088cc;
+            position: relative;
+            overflow: auto; /* Enables native scrolling */
+            background: #000;
+            border-radius: 10px;
+            /* This allows the container to handle gestures better */
+            touch-action: pan-x pan-y; 
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            /* This is the secret: 'initialScale' will be set by JS */
+            width: 100%; 
+            height: auto;
+        }
         .toolbar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 90%; margin-top: 10px; }
         button { padding: 12px; border: none; border-radius: 8px; background: #333; color: white; font-weight: bold; cursor: pointer; }
         button.active { background: #0088cc; border: 2px solid white; }
@@ -51,6 +70,29 @@
     </div>
 
     <script>
+        img.onload = function() {
+        document.getElementById('upload-btn').style.display = 'none';
+        document.getElementById('editor-ui').style.display = 'flex';
+        
+        const viewport = document.getElementById('viewport');
+        const screenWidth = viewport.clientWidth;
+        
+        // Internal Resolution stays high for the AI
+        const internalW = 1024; 
+        const ratio = internalW / img.width;
+        const internalH = img.height * ratio;
+        
+        [pCanvas, mCanvas].forEach(c => {
+            c.width = internalW;
+            c.height = internalH;
+            // This makes the 1024px image fit inside the phone screen width at 1x
+            c.style.width = screenWidth + "px";
+            c.style.height = (internalH * (screenWidth / internalW)) + "px";
+        });
+    
+        pCtx.drawImage(img, 0, 0, internalW, internalH);
+        saveState();
+    };
         const tg = window.Telegram.WebApp;
         const pCanvas = document.getElementById('photoCanvas');
         const mCanvas = document.getElementById('maskCanvas');
@@ -62,10 +104,10 @@
 
         document.getElementById('fileInput').onchange = (e) => {
             const reader = new FileReader();
-            reader.onload = (ev) => {
+            reader.on = (ev) => {
                 const img = new Image();
-                img.onload = () => {
-                    document.getElementById('upload-btn').style.display = 'none';
+                img.on = () => {
+                    document.getElementById('up-btn').style.display = 'none';
                     document.getElementById('editor-ui').style.display = 'flex';
                     
                     const ratio = 768 / img.width;
@@ -83,12 +125,21 @@
         function updateZoom(v) {
             zoom = v;
             document.getElementById('zVal').innerText = v + "x";
-            pCanvas.style.transform = `scale(${v})`;
-            mCanvas.style.transform = `scale(${v})`;
-            // Allow native scrolling when zoomed
-            document.getElementById('viewport').style.touchAction = v > 1 ? 'auto' : 'none';
+            
+            const scale = v;
+            pCanvas.style.transform = `scale(${scale})`;
+            mCanvas.style.transform = `scale(${scale})`;
+        
+            // If we are in Move mode, we allow the viewport to scroll
+            if (mode === 'move') {
+                mCanvas.style.pointerEvents = 'none';
+                document.getElementById('viewport').style.overflow = 'auto';
+            } else {
+                mCanvas.style.pointerEvents = 'auto';
+                // Lock scrolling while drawing to prevent accidental sliding
+                document.getElementById('viewport').style.overflow = 'hidden';
+            }
         }
-
         function setMode(m) {
             mode = m;
             document.getElementById('moveBtn').className = m === 'move' ? 'active' : '';
