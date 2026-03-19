@@ -4,70 +4,112 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; background: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
+        body {
+            /* Prevents the entire body from scrolling */
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+        
         #viewport {
             width: 95vw;
-            height: 65vh; /* Take up more vertical space on mobile */
-            margin: 10px auto;
+            /* Use flexible height to adapt to screen size, leaving space for minimized tools */
+            height: calc(100vh - 120px); 
+            margin: 5px auto;
             border: 2px solid #0088cc;
             position: relative;
-            overflow: auto; /* Enables native scrolling */
+            overflow: auto; /* Required for zoom panning */
             background: #000;
-            border-radius: 10px;
-            /* This allows the container to handle gestures better */
-            touch-action: pan-x pan-y; 
+            border-radius: 8px;
+            touch-action: none;
         }
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            transform-origin: top left;
-            /* This is the secret: 'initialScale' will be set by JS */
-            width: 100%; 
-            height: auto;
+        
+        /* Base style for minimized buttons */
+        .min-btn {
+            padding: 6px;
+            border: none;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #ccc;
+            font-size: 12px;
+            font-weight: normal;
+            cursor: pointer;
+            flex-grow: 1; /* Distribute space evenly */
+            text-align: center;
         }
-        .toolbar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 90%; margin-top: 10px; }
-        button { padding: 12px; border: none; border-radius: 8px; background: #333; color: white; font-weight: bold; cursor: pointer; }
-        button.active { background: #0088cc; border: 2px solid white; }
-        .controls { width: 90%; margin: 15px 0; background: #1c1c1c; padding: 15px; border-radius: 10px; display: none; }
-        #upload-btn { background: #222; border: 2px dashed #444; padding: 40px; width: 80%; margin-top: 50px; text-align: center; border-radius: 15px; }
-        .btn-gen { background: #0088cc; width: 90%; padding: 18px; margin-top: 10px; font-size: 16px; border-radius: 10px; }
+        
+        /* Active style for minimized buttons */
+        .min-btn.active {
+            background: #0088cc;
+            color: white;
+            font-weight: bold;
+        }
+        
+        /* Red style for Clear button */
+        .min-btn.btn-clear {
+            background: #500;
+        }
+        
+        /* Container for Minimized Tools */
+        .min-tools {
+            display: flex;
+            flex-direction: column;
+            width: 95vw;
+            gap: 5px;
+            padding-bottom: 5px;
+            /* Hidden by default, will show when photo loads */
+            display: none; 
+        }
+        
+        /* Row grouping within Minimized Tools */
+        .tools-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 5px;
+            align-items: center;
+        }
+        
+        /* Small label style */
+        .min-label {
+            font-size: 11px;
+            color: #999;
+        }
+        
+        /* Adjustments to remove old styles */
+        #editor-ui, #mainControls { display: none !important; }
     </style>
 </head>
 <body>
-
-    <div id="upload-btn" onclick="document.getElementById('fileInput').click()">
-        <strong>[+] UPLOAD PHOTO</strong><br><small>1440x1800 supported</small>
-    </div>
-    <input type="file" id="fileInput" accept="image/*" style="display:none">
-
+<div>
     <div id="editor-ui" style="display:none; width: 100%; flex-direction: column; align-items: center;">
-        <div id="viewport">
-            <canvas id="photoCanvas"></canvas>
-            <canvas id="maskCanvas"></canvas>
-        </div>
-
-        <div class="toolbar">
-            <button id="moveBtn" onclick="setMode('move')">🖐️ Move</button>
-            <button id="brushBtn" class="active" onclick="setMode('brush')">🖌️ Brush</button>
-            <button id="eraseBtn" onclick="setMode('erase')">🧽 Eraser</button>
-        </div>
-
-        <div class="controls" id="mainControls" style="display:block">
-            <label>Zoom: <span id="zVal">1x</span></label>
-            <input type="range" min="1" max="4" step="0.1" value="1" style="width:100%" oninput="updateZoom(this.value)">
-            
-            <label>Brush Size</label>
-            <input type="range" id="sizeRange" min="5" max="80" value="30" style="width:100%">
-
-            <div style="margin-top:10px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <button onclick="undo()" style="background:#444">↩️ Undo</button>
-                <button onclick="clearMask()" style="background:#600">🗑️ Clear</button>
-            </div>
-        </div>
-
-        <button class="btn-gen" onclick="sendToBot()">🔥 GENERATE RESULTS</button>
+    <div id="viewport">
+        <canvas id="photoCanvas"></canvas>
+        <canvas id="maskCanvas"></canvas>
     </div>
+
+    <div class="min-tools" id="compactTools">
+        <div class="tools-row">
+            <button id="moveBtn" class="min-btn" onclick="setMode('move')">🖐️ Move</button>
+            <button id="brushBtn" class="min-btn active" onclick="setMode('brush')">🖌️ Brush</button>
+            <button id="eraseBtn" class="min-btn" onclick="setMode('erase')">🧽 Erase</button>
+            <button id="undoBtn" class="min-btn" onclick="undo()">↩️ Undo</button>
+            <button class="min-btn btn-clear" onclick="clearMask()">🗑️ Clear</button>
+        </div>
+
+        <div class="tools-row">
+            <div style="flex-grow: 1;">
+                <label class="min-label">Zoom: <span id="zVal">1x</span></label>
+                <input type="range" min="1" max="4" step="0.1" value="1" style="width:100%" oninput="updateZoom(this.value)">
+            </div>
+            <div style="flex-grow: 1;">
+                <label class="min-label">Size</label>
+                <input type="range" id="sizeRange" min="5" max="80" value="30" style="width:100%">
+            </div>
+            <button class="min-btn" onclick="sendToBot()" style="background:#0088cc; color:white; padding: 10px;">🔥 GENERATE</button>
+        </div>
+    </div>
+</div>
 
     <script>
         const tg = window.Telegram.WebApp;
@@ -88,6 +130,7 @@
                 img.onload = function() {
                     document.getElementById('upload-btn').style.display = 'none';
                     document.getElementById('editor-ui').style.display = 'flex';
+                    document.getElementById('compactTools').style.display = 'flex'; // --- THIS LINE IS THE FIX FOR MINIMIZED UI ---
                     
                     const viewport = document.getElementById('viewport');
                     const screenWidth = viewport.clientWidth;
@@ -149,23 +192,35 @@
         };
 
         mCanvas.onpointermove = (e) => {
-            if (!drawing || mode === 'move') return;
+            if (!drawing || mode === 'move') return; // Immediate return if not drawing or in move mode
             const rect = mCanvas.getBoundingClientRect();
             const x = (e.clientX - rect.left) * (mCanvas.width / rect.width);
             const y = (e.clientY - rect.top) * (mCanvas.height / rect.height);
-
+        
+            // Get brush settings from the simplified inputs
             mCtx.lineWidth = document.getElementById('sizeRange').value;
             mCtx.lineCap = 'round';
             mCtx.lineJoin = 'round';
-            mCtx.globalCompositeOperation = mode === 'brush' ? 'source-over' : 'destination-out';
-            mCtx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-
+        
+            // IMPORTANT FOR CONSTANT OPACITY:
+            if (mode === 'brush') {
+                // Use a solid color, not semi-transparent
+                mCtx.globalCompositeOperation = 'source-over';
+                mCtx.strokeStyle = '#ffffff'; // <--- SOLID WHITE for constant opacity
+            } else {
+                // Eraser punching a pure transparent hole
+                mCtx.globalCompositeOperation = 'destination-out';
+            }
+        
             mCtx.beginPath();
             mCtx.moveTo(lastX, lastY);
             mCtx.lineTo(x, y);
             mCtx.stroke();
-            
-            [lastX, lastY] = [x, y];
+            mCtx.closePath(); // Ensure complete line close
+        
+            // Efficiently update last coordinates
+            lastX = x;
+            lastY = y;
         };
 
         window.onpointerup = () => drawing = false;
