@@ -1,47 +1,100 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; background: #000; color: white; text-align: center; }
-        canvas { border: 1px solid #555; touch-action: none; background: #222; }
-        button { padding: 10px 20px; margin: 10px; background: #0088cc; color: white; border: none; border-radius: 5px; }
+        body { margin: 0; background: #1a1a1a; color: white; font-family: sans-serif; text-align: center; overflow: hidden; }
+        .container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        canvas { border: 2px solid #333; touch-action: none; background: #000; max-width: 95%; cursor: crosshair; }
+        .controls { margin-top: 15px; }
+        button { padding: 12px 24px; margin: 5px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-clear { background: #444; color: white; }
+        .btn-send { background: #0088cc; color: white; }
+        p { font-size: 14px; color: #aaa; margin: 5px; }
     </style>
 </head>
 <body>
-    <h3>Paint the Clothes White</h3>
-    <canvas id="canvas"></canvas><br>
-    <button onclick="clearCanvas()">Clear</button>
-    <button onclick="sendToBot()">Apply Clothes</button>
+    <div class="container">
+        <h3>Paint Over Clothes</h3>
+        <p>Avoid painting your face to keep it original!</p>
+        <canvas id="paintCanvas"></canvas>
+        <div class="controls">
+            <button class="btn-clear" onclick="clearCanvas()">Clear</button>
+            <button class="btn-send" onclick="sendMask()">Apply Outfit</button>
+        </div>
+    </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Make the app full screen
+        tg.expand();
 
-        const canvas = document.getElementById('canvas');
+        const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth * 0.9;
-        canvas.height = canvas.width; // Keep it square
-
         let drawing = false;
 
-        // Simple drawing logic
-        canvas.addEventListener('pointerdown', () => drawing = true);
-        canvas.addEventListener('pointerup', () => drawing = false);
-        canvas.addEventListener('pointermove', (e) => {
-            if (!drawing) return;
-            ctx.fillStyle = "white";
+        // Set canvas size based on screen
+        const size = Math.min(window.innerWidth * 0.9, 512);
+        canvas.width = size;
+        canvas.height = size;
+
+        // Setup Brush
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 25;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+
+        function getCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function startDrawing(e) {
+            drawing = true;
+            draw(e);
+        }
+
+        function stopDrawing() {
+            drawing = false;
             ctx.beginPath();
-            ctx.arc(e.offsetX, e.offsetY, 15, 0, Math.PI * 2);
-            ctx.fill();
-        });
+        }
 
-        function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+        function draw(e) {
+            if (!drawing) return;
+            const coords = getCoords(e);
+            ctx.lineTo(coords.x, coords.y);
+            ctx.stroke();
+        }
 
-        function sendToBot() {
-            const data = canvas.toDataURL("image/png");
-            // This sends the Base64 string back to your bot.py
-            tg.sendData(data); 
+        canvas.addEventListener('pointerdown', startDrawing);
+        canvas.addEventListener('pointermove', draw);
+        canvas.addEventListener('pointerup', stopDrawing);
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function sendMask() {
+            // Create a temporary canvas to ensure we send a Black & White mask
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Fill background with black
+            tempCtx.fillStyle = "black";
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // Draw the white mask on top
+            tempCtx.drawImage(canvas, 0, 0);
+            
+            const maskData = tempCanvas.toDataURL("image/png");
+            tg.sendData(maskData); // Send back to bot.py
         }
     </script>
 </body>
