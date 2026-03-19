@@ -1,43 +1,24 @@
-<div class="container">
-    <canvas id="paintCanvas"></canvas>
-    
-    <div class="controls">
-        <p>Step 2: Choose your Style</p>
-        <select id="bodyType">
-            <option value="slender">Slender Body</option>
-            <option value="athletic">Athletic/Toned</option>
-            <option value="heavy">Stocky/Broad</option>
-        </select>
-
-        <select id="outfitType">
-            <option value="business suit">Business Suit</option>
-            <option value="formal tuxedo">Formal Tuxedo</option>
-            <option value="casual summer outfit">Casual Wear</option>
-        </select>
-        
-        <button class="btn-send" onclick="sendData()">Generate 2 Batches</button>
+<div id="upload-container">
+    <input type="file" id="imageLoader" accept="image/*" style="display:none;">
+    <div class="upload-box" onclick="document.getElementById('imageLoader').click()">
+        <span>[+] upload photo</span>
     </div>
 </div>
 
 <script>
-    function sendData() {
-        const canvas = document.getElementById('paintCanvas');
-        const body = document.getElementById('bodyType').value;
-        const outfit = document.getElementById('outfitType').value;
+    // JavaScript to load the uploaded file onto the canvas
+    const imageLoader = document.getElementById('imageLoader');
+    imageLoader.addEventListener('change', handleImage, false);
 
-        // Create the B&W Mask
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
-        const tCtx = tempCanvas.getContext('2d');
-        tCtx.fillStyle = "black";
-        tCtx.fillRect(0,0,canvas.width,canvas.height);
-        tCtx.drawImage(canvas, 0, 0);
-        
-        const maskBase64 = tempCanvas.toDataURL("image/png");
-
-        // We combine everything into one string using a separator like "|"
-        const combinedData = `${maskBase64}|${body}|${outfit}`;
-        
-        tg.sendData(combinedData); 
+    function handleImage(e) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            }
+            img.src = event.target.result;
+        }
+        reader.readAsDataURL(e.target.files[0]);
     }
 </script>
