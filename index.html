@@ -41,7 +41,8 @@
 <div class="section-title">Step 1: Paint the Area</div>
 
 <div id="canvas-viewport">
-    <canvas id="mainCanvas"></canvas>
+    <canvas id="photoCanvas" style="position: absolute; top: 0; left: 0; z-index: 1;"></canvas>
+    <canvas id="maskCanvas" style="position: absolute; top: 0; left: 0; z-index: 2;"></canvas>
 </div>
 
 <div class="zoom-controls">
@@ -120,78 +121,63 @@
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        const canvas = document.getElementById('mainCanvas');
-        const ctx = canvas.getContext('2d');
+        const photoCanvas = document.getElementById('photoCanvas');
+        const pCtx = photoCanvas.getContext('2d');
+        const maskCanvas = document.getElementById('maskCanvas');
+        const mCtx = maskCanvas.getContext('2d');
         
-        let drawing = false;
-        let mode = 'brush';
-        let history = [];
-        let bgImage = null;
-        let currentZoom = 1;
-        
-        // --- SECTION 1: THE PHOTO LOADER (reader.onload) ---
-        // This triggers the moment the user picks a file
         document.getElementById('fileInput').onchange = function(e) {
             const reader = new FileReader();
             reader.onload = function(event) {
                 bgImage = new Image();
                 bgImage.onload = function() {
-                    // Hide the upload button, show the editor
                     document.getElementById('upload-btn').style.display = 'none';
                     document.getElementById('editor-ui').style.display = 'flex';
                     
-                    // 1. SET THE RESOLUTION TO 768x768
-                    canvas.width = 768;
-                    canvas.height = 768;
+                    // Set both to 768x768
+                    [photoCanvas, maskCanvas].forEach(c => { c.width = 768; c.height = 768; });
         
-                    // 2. THE "NO GAP" MATH (Center Crop/Fill)
-                    // This ensures the photo fills the 768x768 square completely
-                    const scale = Math.max(canvas.width / bgImage.width, canvas.height / bgImage.height);
-                    const x = (canvas.width / 2) - (bgImage.width / 2) * scale;
-                    const y = (canvas.height / 2) - (bgImage.height / 2) * scale;
+                    // Fit the 1440x1800 photo into 768x768 without cropping
+                    const ratio = Math.min(768 / bgImage.width, 768 / bgImage.height);
+                    const x = (768 - bgImage.width * ratio) / 2;
+                    const y = (768 - bgImage.height * ratio) / 2;
         
-                    // 3. DRAW THE PHOTO
-                    ctx.drawImage(bgImage, x, y, bgImage.width * scale, bgImage.height * scale);
-                    saveState(); // Save this as the "Base" for Undo
+                    pCtx.fillStyle = "black";
+                    pCtx.fillRect(0, 0, 768, 768);
+                    pCtx.drawImage(bgImage, x, y, bgImage.width * ratio, bgImage.height * ratio);
+                    
+                    saveState(); 
                 }
                 bgImage.src = event.target.result;
             }
             reader.readAsDataURL(e.target.files[0]);
         };
-        
+                
         // --- SECTION 2: DRAWING & BRUSH LOGIC ---
         // This handles the white paint on the 768px canvas
         function draw(e) {
             if (!drawing) return;
-            
-            // Get the size of the canvas as it appears on the phone screen
-            const rect = canvas.getBoundingClientRect();
-            
-            // Convert screen touches to the internal 768px coordinates
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
+            const rect = maskCanvas.getBoundingClientRect();
+            const scale = 768 / rect.width;
         
-            // Apply the math to find exactly where the finger is
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
+            const x = (e.clientX - rect.left) * scale;
+            const y = (e.clientY - rect.top) * scale;
         
-            // Brush settings
-            ctx.lineWidth = document.getElementById('sizeRange').value * (768 / 500); 
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
+            mCtx.lineWidth = document.getElementById('sizeRange').value * (768 / 500);
+            mCtx.lineCap = 'round';
             
             if (mode === 'brush') {
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; // Semi-transparent white
+                mCtx.globalCompositeOperation = 'source-over';
+                mCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)'; // White paint
             } else {
-                ctx.globalCompositeOperation = 'destination-out'; // Eraser mode
+                // This now only erases the PAINT, not the photo!
+                mCtx.globalCompositeOperation = 'destination-out'; 
             }
         
-            ctx.lineTo(x, y);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x, y);
+            mCtx.lineTo(x, y);
+            mCtx.stroke();
+            mCtx.beginPath();
+            mCtx.moveTo(x, y);
         }
         
         // --- SECTION 3: UTILS (Undo, Zoom, Mode) ---
@@ -231,13 +217,20 @@
         
         // --- SECTION 5: SEND TO BOT ---
         function sendToBot() {
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = 768; finalCanvas.height = 768;
+            const fCtx = finalCanvas.getContext('2d');
+            
+            // Draw photo, then draw mask on top
+            fCtx.drawImage(photoCanvas, 0, 0);
+            fCtx.drawImage(maskCanvas, 0, 0);
+            
             const dress = document.getElementById('dressType').value;
             const body = document.getElementById('bodyType').value;
             const breast = document.getElementById('breastType').value;
             const vagina = document.getElementById('vaginaType').value;
             
-            // The dataString sent back to your Python script
-            const dataString = `${canvas.toDataURL("image/png")}|${dress}|${body}|${breast}|${vagina}`;
+            const dataString = `${finalCanvas.toDataURL("image/png")}|${dress}|${body}|${breast}|${vagina}`;
             tg.sendData(dataString);
         }
     </script>
