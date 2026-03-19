@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <html>
+<div class="toolbar">
+    <button id="moveBtn" onclick="setMode('move')">🖐️ Move/Zoom</button>
+    <button id="brushBtn" class="active" onclick="setMode('brush')">🖌️ Brush</button>
+    <button id="eraseBtn" onclick="setMode('erase')">🧽 Eraser</button>
+</div>
+}
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -110,6 +116,10 @@
     </div>
 
     <script>
+        .nav-mode {
+        touch-action: auto !important; 
+        pointer-events: none; /* Let the touch pass through to the viewport for scrolling */
+    }
         const tg = window.Telegram.WebApp;
         const pCanvas = document.getElementById('photoCanvas');
         const mCanvas = document.getElementById('maskCanvas');
@@ -159,16 +169,14 @@
         
         // 3. Drawing Logic (Targeting the Mask Layer)
         function draw(e) {
-            if (!drawing) return;
+            if (!drawing || mode === 'move') return; // Don't draw in move mode
             const rect = mCanvas.getBoundingClientRect();
-            
-            // Math to ensure brush stays under finger during zoom
             const x = (e.clientX - rect.left) * (mCanvas.width / rect.width);
             const y = (e.clientY - rect.top) * (mCanvas.height / rect.height);
         
-            mCtx.lineWidth = document.getElementById('sizeRange').value * (768 / 400);
-            mCtx.lineCap = 'round';
-            mCtx.lineJoin = 'round';
+            ctx.lineWidth = document.getElementById('sizeRange').value;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round'; // THIS makes it a smooth line instead of dots
         
             if (mode === 'brush') {
                 mCtx.globalCompositeOperation = 'source-over';
@@ -194,9 +202,20 @@
         mCanvas.onpointermove = draw;
         
         function setMode(m) { 
-            mode = m; 
-            document.getElementById('brushBtn').className = (m === 'brush' ? 'active' : '');
-            document.getElementById('eraseBtn').className = (m === 'erase' ? 'active' : '');
+            mode = m;
+            const mCanvas = document.getElementById('maskCanvas');
+            
+            // Reset active classes
+            document.querySelectorAll('.toolbar button').forEach(btn => btn.classList.remove('active'));
+            
+            if (m === 'move') {
+                document.getElementById('moveBtn').classList.add('active');
+                mCanvas.style.pointerEvents = 'none'; // DISABLE DRAWING
+                tg.MainButton.setText("SWITCH TO BRUSH TO PAINT"); 
+            } else {
+                document.getElementById(m + 'Btn').classList.add('active');
+                mCanvas.style.pointerEvents = 'auto'; // ENABLE DRAWING
+            }
         }
         
         function applyZoom(val) {
