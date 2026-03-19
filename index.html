@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { margin: 0; background: #000; color: white; text-align: center; }
+        canvas { border: 1px solid #555; touch-action: none; background: #222; }
+        button { padding: 10px 20px; margin: 10px; background: #0088cc; color: white; border: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h3>Paint the Clothes White</h3>
+    <canvas id="canvas"></canvas><br>
+    <button onclick="clearCanvas()">Clear</button>
+    <button onclick="sendToBot()">Apply Clothes</button>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Make the app full screen
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth * 0.9;
+        canvas.height = canvas.width; // Keep it square
+
+        let drawing = false;
+
+        // Simple drawing logic
+        canvas.addEventListener('pointerdown', () => drawing = true);
+        canvas.addEventListener('pointerup', () => drawing = false);
+        canvas.addEventListener('pointermove', (e) => {
+            if (!drawing) return;
+            ctx.fillStyle = "white";
+            ctx.beginPath();
+            ctx.arc(e.offsetX, e.offsetY, 15, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+        function sendToBot() {
+            const data = canvas.toDataURL("image/png");
+            // This sends the Base64 string back to your bot.py
+            tg.sendData(data); 
+        }
+    </script>
+</body>
+</html>
