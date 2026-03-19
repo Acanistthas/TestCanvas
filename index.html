@@ -1,106 +1,43 @@
-<head>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    </head> 
-<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body { margin: 0; background: #1a1a1a; color: white; font-family: sans-serif; text-align: center; overflow: hidden; }
-        .container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        canvas { border: 2px solid #333; touch-action: none; background: #000; max-width: 95%; cursor: crosshair; }
-        .controls { margin-top: 15px; }
-        button { padding: 12px 24px; margin: 5px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .btn-clear { background: #444; color: white; }
-        .btn-send { background: #0088cc; color: white; }
-        p { font-size: 14px; color: #aaa; margin: 5px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h3>Paint Over Clothes</h3>
-        <p>Avoid painting your face to keep it original!</p>
-        <canvas id="paintCanvas"></canvas>
-        <div class="controls">
-            <button class="btn-clear" onclick="clearCanvas()">Clear</button>
-            <button class="btn-send" onclick="sendMask()">Apply Outfit</button>
-        </div>
+<div class="container">
+    <canvas id="paintCanvas"></canvas>
+    
+    <div class="controls">
+        <p>Step 2: Choose your Style</p>
+        <select id="bodyType">
+            <option value="slender">Slender Body</option>
+            <option value="athletic">Athletic/Toned</option>
+            <option value="heavy">Stocky/Broad</option>
+        </select>
+
+        <select id="outfitType">
+            <option value="business suit">Business Suit</option>
+            <option value="formal tuxedo">Formal Tuxedo</option>
+            <option value="casual summer outfit">Casual Wear</option>
+        </select>
+        
+        <button class="btn-send" onclick="sendData()">Generate 2 Batches</button>
     </div>
+</div>
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-
+<script>
+    function sendData() {
         const canvas = document.getElementById('paintCanvas');
-        const ctx = canvas.getContext('2d');
-        let drawing = false;
+        const body = document.getElementById('bodyType').value;
+        const outfit = document.getElementById('outfitType').value;
 
-        // Set canvas size based on screen
-        const size = Math.min(window.innerWidth * 0.9, 512);
-        canvas.width = size;
-        canvas.height = size;
+        // Create the B&W Mask
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
+        const tCtx = tempCanvas.getContext('2d');
+        tCtx.fillStyle = "black";
+        tCtx.fillRect(0,0,canvas.width,canvas.height);
+        tCtx.drawImage(canvas, 0, 0);
+        
+        const maskBase64 = tempCanvas.toDataURL("image/png");
 
-        // Setup Brush
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 25;
-        ctx.lineJoin = "round";
-        ctx.lineCap = "round";
-
-        function getCoords(e) {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return {
-                x: clientX - rect.left,
-                y: clientY - rect.top
-            };
-        }
-
-        function startDrawing(e) {
-            drawing = true;
-            draw(e);
-        }
-
-        function stopDrawing() {
-            drawing = false;
-            ctx.beginPath();
-        }
-
-        function draw(e) {
-            if (!drawing) return;
-            const coords = getCoords(e);
-            ctx.lineTo(coords.x, coords.y);
-            ctx.stroke();
-        }
-
-        canvas.addEventListener('pointerdown', startDrawing);
-        canvas.addEventListener('pointermove', draw);
-        canvas.addEventListener('pointerup', stopDrawing);
-
-        function clearCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-
-        function sendMask() {
-            // Create a temporary canvas to ensure we send a Black & White mask
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = canvas.width;
-            tempCanvas.height = canvas.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            
-            // Fill background with black
-            tempCtx.fillStyle = "black";
-            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-            
-            // Draw the white mask on top
-            tempCtx.drawImage(canvas, 0, 0);
-            
-            const maskData = tempCanvas.toDataURL("image/png");
-            tg.sendData(maskData); // Send back to bot.py
-        }
-    </script>
-</body>
-</html>
+        // We combine everything into one string using a separator like "|"
+        const combinedData = `${maskBase64}|${body}|${outfit}`;
+        
+        tg.sendData(combinedData); 
+    }
+</script>
