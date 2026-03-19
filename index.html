@@ -7,32 +7,46 @@
     <input type="file" id="imageLoader" accept="image/*" style="display:none;">
 
     <div class="controls">
-        <p>Adjust parameters to change result:</p>
+        <p>Adjust these parameters to change result based on your preferences!:</p>
+
+         <div class="param-row">
+            <label>Dress Type:</label>
+            <select id="dressType">
+                <option value="nude">Nude</option>
+                 <option value="nudewithtattoo">Nude with Tattoo</option>
+                <option value="bikini">Bikini</option>
+                <option value="lingerie">Lingerie</option>
+                <option value="swimsuit">Swimsuit</option>
+                <option value="bodysuit">Bodysuit</option>
+            </select>
+        </div>
         
         <div class="param-row">
             <label>Body Type:</label>
             <select id="bodyType">
                 <option value="slim">Slim</option>
+                <option value="normal">Normal</option>
                 <option value="athletic">Athletic</option>
-                <option value="curvy">Curvy</option>
+                <option value="fat">Fat</option>
             </select>
         </div>
 
         <div class="param-row">
-            <label>Chest Type:</label>
-            <select id="chestType">
-                <option value="natural">Natural</option>
-                <option value="small">Small</option>
-                <option value="large">Large</option>
+            <label>Breast Type:</label>
+            <select id="breastType">
+                <option value="natural">Small</option>
+                <option value="medium">Medium</option>
+                <option value="big">Big</option>
+                <option value="huge">Huge</option>
             </select>
         </div>
 
         <div class="param-row">
-            <label>Waist Type:</label>
-            <select id="waistType">
-                <option value="standard">Standard</option>
-                <option value="thin">Thin / Snatched</option>
-                <option value="wide">Wide</option>
+            <label>Vagina Type:</label>
+            <select id="vaginaType">
+                <option value="hairy">Hairy</option>
+                <option value="shaved">Shaved</option>
+                <option value="brazillian">Brazillian</option>
             </select>
         </div>
 
@@ -43,15 +57,16 @@
 
 <script>
     function sendData() {
+        const dress = document.getElementById('dressType').value;
         const body = document.getElementById('bodyType').value;
-        const chest = document.getElementById('chestType').value;
-        const waist = document.getElementById('waistType').value;
+        const breast = document.getElementById('breastType').value;
+        const vagina = document.getElementById('vaginaType').value;
         
         // Create Mask
         const maskData = canvas.toDataURL("image/png");
 
         // Combine all data into one string for Python to read
-        const payload = `${maskData}|${body}|${chest}|${waist}`;
+        const payload = `${maskData}|${dress}|${body}|${breast}|${vagina}`;
         tg.sendData(payload);
     }
 </script>
