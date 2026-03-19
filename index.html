@@ -19,6 +19,70 @@
         .btn-clear { background: #600; }
         .min-label { font-size: 10px; color: #999; display: block; }
         input[type=range] { margin: 0; }
+        #parameter-drawer { /* The Drawer Container */
+            position: fixed;
+            bottom: -300px; /* Hidden below screen */
+            left: 0;
+            width: 100%;
+            background: #1c1c1c;
+            border-top: 3px solid #0088cc;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            transition: bottom 0.3s ease-out;
+            z-index: 1000;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        #parameter-drawer.open {
+            bottom: 0; /* Slide up into view */
+        }
+        
+        /* Dark overlay to focus on the drawer */
+        #drawer-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 999;
+        }
+        
+        .param-group { margin-bottom: 15px; }
+        .param-label { display: block; font-size: 13px; color: #888; margin-bottom: 5px; }
+        
+        /* Styling for parameter chips/buttons */
+        .chip-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .chip {
+            padding: 8px 15px;
+            background: #333;
+            border-radius: 20px;
+            font-size: 12px;
+            border: 1px solid #444;
+        }
+        .chip.selected {
+            background: #0088cc;
+            border-color: white;
+        }
+        <div id="drawer-overlay" onclick="toggleDrawer(false)"></div>
+        <div id="parameter-drawer">
+            <div style="width: 40px; height: 5px; background: #444; border-radius: 10px; margin: 0 auto 15px;"></div>
+            
+            <div class="param-group">
+                <span class="param-label">Body Transformation</span>
+                <div class="chip-group">
+                    <div class="chip selected" onclick="selectChip(this, 'body')">Slim</div>
+                    <div class="chip" onclick="selectChip(this, 'body')">Curvy</div>
+                    <div class="chip" onclick="selectChip(this, 'body')">Fit</div>
+                </div>
+            </div>
+        
+            <div class="param-group">
+                <span class="param-label">AI Intensity (Denoising)</span>
+                <input type="range" id="denoiseRange" min="0.3" max="0.8" step="0.05" value="0.55" style="width:100%">
+            </div>
+        
+            <button class="min-btn" style="width:100%; background:#0088cc; padding: 12px; margin-top: 10px;" onclick="toggleDrawer(false)">Done</button>
+        </div>
     </style>
 </head>
 <body>
@@ -41,6 +105,7 @@
                 <button id="eraseBtn" class="min-btn" onclick="setMode('erase')">🧽 Erase</button>
                 <button id="undoBtn" class="min-btn" onclick="undo()">↩️ Undo</button>
                 <button class="min-btn btn-clear" onclick="clearMask()">🗑️ Clear</button>
+                <button class="min-btn" onclick="toggleDrawer(true)">⚙️ Options</button>
             </div>
 
             <div class="tools-row">
@@ -58,6 +123,26 @@
     </div>
 
     <script>
+        let selectedBody = "Slim";
+        function toggleDrawer(show) {
+            const drawer = document.getElementById('parameter-drawer');
+            const overlay = document.getElementById('drawer-overlay');
+            if (show) {
+                drawer.classList.add('open');
+                overlay.style.display = 'block';
+            } else {
+                drawer.classList.remove('open');
+                overlay.style.display = 'none';
+            }
+        }
+        
+        function selectChip(el, group) {
+            // Deselect others in the same group
+            el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+            // Select this one
+            el.classList.add('selected');
+            selectedBody = el.innerText;
+        }
         const tg = window.Telegram.WebApp;
         const pCanvas = document.getElementById('photoCanvas');
         const mCanvas = document.getElementById('maskCanvas');
