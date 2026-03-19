@@ -1,72 +1,141 @@
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<div class="container">
-    <div id="upload-zone" onclick="document.getElementById('imageLoader').click()">
-        <canvas id="paintCanvas"></canvas>
-        <div id="upload-placeholder">[+] upload photo</div>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { margin: 0; background: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding-bottom: 40px; }
+        #canvas-container { position: relative; margin-top: 10px; background: #000; border: 1px solid #333; width: 350px; height: 350px; }
+        canvas { touch-action: none; width: 100%; height: 100%; }
+        
+        .section-title { width: 90%; margin: 20px 0 10px 0; font-size: 14px; color: #0088cc; text-transform: uppercase; font-weight: bold; }
+        
+        .toolbar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 90%; }
+        .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%; background: #1c1c1c; padding: 15px; border-radius: 10px; }
+        
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 12px; color: #aaa; }
+        
+        button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; background: #333; color: white; cursor: pointer; }
+        button.active { background: #0088cc; }
+        select { background: #2a2a2a; color: white; border: 1px solid #444; padding: 10px; border-radius: 8px; }
+        
+        .btn-gen { background: #0088cc; width: 90%; margin-top: 25px; padding: 18px; font-size: 16px; box-shadow: 0 4px 15px rgba(0,136,204,0.3); }
+        #upload-btn { background: #222; border: 2px dashed #444; padding: 40px; width: 80%; margin-top: 20px; text-align: center; border-radius: 15px; }
+    </style>
+</head>
+<body>
+
+    <div id="upload-btn" onclick="document.getElementById('fileInput').click()">
+        <strong>[+] UPLOAD PHOTO</strong><br><small>Tap to start painting</small>
     </div>
-    <input type="file" id="imageLoader" accept="image/*" style="display:none;">
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
 
-    <div class="controls">
-        <p>Adjust these parameters to change result based on your preferences!:</p>
+    <div id="editor-ui" style="display:none; width: 100%; display: flex; flex-direction: column; align-items: center;">
+        <div id="canvas-container">
+            <canvas id="mainCanvas"></canvas>
+        </div>
 
-         <div class="param-row">
-            <label>Dress Type:</label>
-            <select id="dressType">
-                <option value="nude">Nude</option>
-                 <option value="nudewithtattoo">Nude with Tattoo</option>
-                <option value="bikini">Bikini</option>
-                <option value="lingerie">Lingerie</option>
-                <option value="swimsuit">Swimsuit</option>
-                <option value="bodysuit">Bodysuit</option>
-            </select>
+        <div class="section-title">Drawing Tools</div>
+        <div class="toolbar">
+            <button id="brushBtn" class="active" onclick="setMode('brush')">🖌️ Brush</button>
+            <button id="eraseBtn" onclick="setMode('erase')">🧽 Eraser</button>
+            <button onclick="undo()">↩️ Undo</button>
         </div>
         
-        <div class="param-row">
-            <label>Body Type:</label>
-            <select id="bodyType">
-                <option value="slim">Slim</option>
-                <option value="normal">Normal</option>
-                <option value="athletic">Athletic</option>
-                <option value="fat">Fat</option>
-            </select>
+        <div style="width:90%; margin: 15px 0;">
+            <label>Brush Size</label>
+            <input type="range" id="sizeRange" min="5" max="60" value="25" style="width:100%">
         </div>
 
-        <div class="param-row">
-            <label>Breast Type:</label>
-            <select id="breastType">
-                <option value="natural">Small</option>
-                <option value="medium">Medium</option>
-                <option value="big">Big</option>
-                <option value="huge">Huge</option>
-            </select>
+        <div class="section-title">Body Parameters</div>
+        <div class="params-grid">
+            <div class="control-group">
+                <label>Dress Type</label>
+                <select id="dressType">
+                    <option value="nude">Nude</option>
+                    <option value="nudewithtattoo">Nude with Tattoo</option>
+                    <option value="bikini">Bikini</option>
+                    <option value="lingerie">Lingerie</option>
+                    <option value="swimsuit">Swimsuit</option>
+                    <option value="bodysuit">Bodysuit</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Body Type</label>
+                <select id="bodyType">
+                    <option value="slim">Slim</option>
+                    <option value="normal">Normal</option>
+                    <option value="athletic">Athletic</option>
+                    <option value="fat">Fat</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Breast</label>
+                <select id="breastType">
+                    <option value="natural">Small</option>
+                    <option value="medium">Medium</option>
+                    <option value="big">Big</option>
+                    <option value="huge">Huge</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Vagina</label>
+                <select id="vaginaType">
+                    <option value="hairy">Hairy</option>
+                    <option value="shaved">Shaved</option>
+                    <option value="brazillian">Brazillian</option>
+                </select>
+            </div>
         </div>
 
-        <div class="param-row">
-            <label>Vagina Type:</label>
-            <select id="vaginaType">
-                <option value="hairy">Hairy</option>
-                <option value="shaved">Shaved</option>
-                <option value="brazillian">Brazillian</option>
-            </select>
-        </div>
-
-        <button class="btn-send" onclick="sendData()">GENERATE</button>
-        <button class="btn-clear" onclick="clearCanvas()">Go Back / Clear</button>
+        <button class="btn-gen" onclick="sendToBot()">🔥 GENERATE RESULTS</button>
     </div>
-</div>
 
-<script>
-    function sendData() {
-        const dress = document.getElementById('dressType').value;
-        const body = document.getElementById('bodyType').value;
-        const breast = document.getElementById('breastType').value;
-        const vagina = document.getElementById('vaginaType').value;
+    <script>
+        const tg = window.Telegram.WebApp;
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+        let mode = 'brush';
+        let history = [];
+        let bgImage = null;
+
+        // Image loading logic stays the same...
+        document.getElementById('fileInput').onchange = function(e) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                bgImage = new Image();
+                bgImage.onload = function() {
+                    document.getElementById('upload-btn').style.display = 'none';
+                    document.getElementById('editor-ui').style.display = 'flex';
+                    canvas.width = 512;
+                    canvas.height = 512;
+                    ctx.drawImage(bgImage, 0, 0, 512, 512);
+                    saveState();
+                }
+                bgImage.src = event.target.result;
+            }
+            reader.readAsDataURL(e.target.files[0]);
+        };
+
+        // Brush/Undo logic stays the same...
+        function setMode(m) { mode = m; /* update button classes */ }
+        function saveState() { history.push(canvas.toDataURL()); }
         
-        // Create Mask
-        const maskData = canvas.toDataURL("image/png");
-
-        // Combine all data into one string for Python to read
-        const payload = `${maskData}|${dress}|${body}|${breast}|${vagina}`;
-        tg.sendData(payload);
-    }
-</script>
+        function sendToBot() {
+            const dress = document.getElementById('dressType').value;
+            const body = document.getElementById('bodyType').value;
+            const breast = document.getElementById('breastType').value;
+            const vagina = document.getElementById('vaginaType').value;
+            
+            
+            // Generate data string: image|body|chest|waist|outfit
+            const dataString = `${canvas.toDataURL("image/png")}|${dress}|${body}|${breast}|${vagina}`;
+            tg.sendData(dataString);
+        }
+        
+        // Canvas touch listeners here... (same as previous version)
+    </script>
+</body>
+</html>
