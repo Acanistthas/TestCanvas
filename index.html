@@ -45,9 +45,35 @@
         .chip-group { display: flex; gap: 6px; flex-wrap: wrap; }
         .chip { padding: 6px 12px; background: #333; border-radius: 15px; font-size: 10px; border: 1px solid #444; cursor: pointer; }
         .chip.selected { background: #0088cc; border-color: white; color: white; }
+        /* Loading Overlay */
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 2000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 5px solid #333;
+            border-top: 5px solid #0088cc;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div style="color:white; font-weight:bold;">SENDING TO FORGE...</div>
+        <div style="color:#aaa; font-size:12px; margin-top:10px;">The bot will send the photo in chat shortly.</div>
+    </div>
 
     <div id="bot-header">
         <div class="bot-info">
@@ -276,39 +302,46 @@
         function sendToBot() {
             if (credits <= 0) { alert("No credits left!"); return; }
         
-            // 1. Create B&W Mask
-            const maskExport = document.createElement('canvas');
-            maskExport.width = pCanvas.width;
-            maskExport.height = pCanvas.height;
-            const meCtx = maskExport.getContext('2d');
-            meCtx.fillStyle = "black";
-            meCtx.fillRect(0, 0, maskExport.width, maskExport.height);
-            meCtx.drawImage(mCanvas, 0, 0);
-            meCtx.globalCompositeOperation = 'source-in';
-            meCtx.fillStyle = "white";
-            meCtx.fillRect(0, 0, maskExport.width, maskExport.height);
+            // Show the Loading Overlay
+            document.getElementById('loading-overlay').style.display = 'flex';
         
-            // 2. Prepare Payload (JPEG 0.7 quality is the "Sweet Spot")
-            const payload = {
-                original_image: pCanvas.toDataURL("image/jpeg", 0.7), 
-                mask_image: maskExport.toDataURL("image/png"), // Masks must stay PNG for sharpness
-                params: currentParams
-            };
+            try {
+                const maskExport = document.createElement('canvas');
+                maskExport.width = pCanvas.width;
+                maskExport.height = pCanvas.height;
+                const meCtx = maskExport.getContext('2d');
+                meCtx.fillStyle = "black";
+                meCtx.fillRect(0, 0, maskExport.width, maskExport.height);
+                meCtx.drawImage(mCanvas, 0, 0);
+                meCtx.globalCompositeOperation = 'source-in';
+                meCtx.fillStyle = "white";
+                meCtx.fillRect(0, 0, maskExport.width, maskExport.height);
         
-            const jsonPayload = JSON.stringify(payload);
+                const payload = {
+                    original_image: pCanvas.toDataURL("image/jpeg", 0.6), // Low quality to fit TG limits
+                    mask_image: maskExport.toDataURL("image/png"),
+                    params: currentParams
+                };
         
-            // 3. Safety Check: If still too big, alert the user
-            if (jsonPayload.length > 130000) { 
-                alert("Image is too complex/large for Telegram. Try a simpler photo.");
-                return;
+                const jsonPayload = JSON.stringify(payload);
+        
+                // If payload > 120KB, it will likely fail in Telegram
+                if (jsonPayload.length > 125000) {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    alert("Image too large for Telegram! Size: " + Math.round(jsonPayload.length/1024) + "KB. Try a smaller crop.");
+                    return;
+                }
+        
+                // Send to Bot
+                tg.sendData(jsonPayload);
+                
+                // Give it a split second to send before closing
+                setTimeout(() => { tg.close(); }, 500);
+        
+            } catch (e) {
+                document.getElementById('loading-overlay').style.display = 'none';
+                alert("App Error: " + e.message);
             }
-        
-            credits--;
-            document.getElementById('credits-display').innerText = `Credits: ${credits}/20 left`;
-            
-            // 4. Fire to Bot
-            tg.sendData(jsonPayload);
-            tg.close(); // Closes the MiniApp and returns user to the chat
         }
     </script>
 </body>
