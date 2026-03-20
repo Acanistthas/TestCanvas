@@ -172,24 +172,39 @@
             reader.onload = (event) => {
                 const img = new Image();
                 img.onload = () => {
+                    const MAX_DIM = 1024; // Limits size for Telegram compatibility
+                    let width = img.width;
+                    let height = img.height;
+        
+                    // Calculate new dimensions while maintaining aspect ratio
+                    if (width > height) {
+                        if (width > MAX_DIM) {
+                            height *= MAX_DIM / width;
+                            width = MAX_DIM;
+                        }
+                    } else {
+                        if (height > MAX_DIM) {
+                            width *= MAX_DIM / height;
+                            height = MAX_DIM;
+                        }
+                    }
+        
                     document.getElementById('upload-btn').style.display = 'none';
                     document.getElementById('editor-ui').style.display = 'flex';
                     document.getElementById('compactTools').style.display = 'flex';
                     
                     const viewport = document.getElementById('viewport');
                     const screenWidth = viewport.clientWidth;
-                    const internalW = 1024; 
-                    const ratio = internalW / img.width;
-                    const internalH = img.height * ratio;
                     
                     [pCanvas, mCanvas].forEach(c => {
-                        c.width = internalW;
-                        c.height = internalH;
+                        c.width = width;
+                        c.height = height;
                         c.style.width = screenWidth + "px";
-                        c.style.height = (internalH * (screenWidth / internalW)) + "px";
+                        // Adjust height relative to the scale of the width
+                        c.style.height = (height * (screenWidth / width)) + "px";
                     });
-
-                    pCtx.drawImage(img, 0, 0, internalW, internalH);
+        
+                    pCtx.drawImage(img, 0, 0, width, height);
                     saveState();
                 };
                 img.src = event.target.result;
@@ -261,7 +276,7 @@
         function sendToBot() {
             if (credits <= 0) { alert("No credits left!"); return; }
         
-            // 1. Create the Black & White Mask
+            // 1. Create B&W Mask
             const maskExport = document.createElement('canvas');
             maskExport.width = pCanvas.width;
             maskExport.height = pCanvas.height;
@@ -273,22 +288,27 @@
             meCtx.fillStyle = "white";
             meCtx.fillRect(0, 0, maskExport.width, maskExport.height);
         
-            // 2. Prepare the payload (Sending BOTH images now)
+            // 2. Prepare Payload (JPEG 0.7 quality is the "Sweet Spot")
             const payload = {
-                original_image: pCanvas.toDataURL("image/jpeg", 0.8), // Reduced quality to 0.8 for faster TG transit
-                mask_image: maskExport.toDataURL("image/png"),
+                original_image: pCanvas.toDataURL("image/jpeg", 0.7), 
+                mask_image: maskExport.toDataURL("image/png"), // Masks must stay PNG for sharpness
                 params: currentParams
             };
         
-            // 3. UI Updates
+            const jsonPayload = JSON.stringify(payload);
+        
+            // 3. Safety Check: If still too big, alert the user
+            if (jsonPayload.length > 130000) { 
+                alert("Image is too complex/large for Telegram. Try a simpler photo.");
+                return;
+            }
+        
             credits--;
             document.getElementById('credits-display').innerText = `Credits: ${credits}/20 left`;
             
-            // Optional: Add a "Generating..." alert so they don't click twice
-            alert("Generation started! You can close this window; the bot will send the result shortly.");
-        
-            // 4. Send to Bot
-            tg.sendData(json.stringify(payload));
+            // 4. Fire to Bot
+            tg.sendData(jsonPayload);
+            tg.close(); // Closes the MiniApp and returns user to the chat
         }
     </script>
 </body>
