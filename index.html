@@ -101,9 +101,7 @@
 <body>
 
     <div id="bot-header">
-        <div class="bot-info">
-            <div class="bot-logo"></div> <span>Nudiefie AI Bot</span>
-        </div>
+        <div class="bot-info"><div class="bot-logo"></div> <span>Nudiefie AI Bot</span></div>
         <div id="credits-display" class="credits-box">Credits: 15/20 left</div>
     </div>
 
@@ -112,41 +110,34 @@
     </div>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
 
-    <div id="editor-ui" style="display:none; width: 100%; flex-direction: column; align-items: center;">
+    <div id="editor-ui" style="display:none;">
         <div id="viewport">
             <canvas id="photoCanvas"></canvas>
             <canvas id="maskCanvas"></canvas>
         </div>
 
-        <div class="min-tools" id="compactTools">
-            <div class="tools-row">
-                <button id="moveBtn" class="min-btn" onclick="setMode('move')">🖐️ Move</button>
-                <button id="brushBtn" class="min-btn active" onclick="setMode('brush')">🖌️ Brush</button>
-                <button id="eraseBtn" class="min-btn" onclick="setMode('erase')">🧽 Erase</button>
-                <button id="undoBtn" class="min-btn" onclick="undo()">↩️ Undo</button>
-                <button class="min-btn btn-clear" onclick="clearMask()">🗑️ Clear</button>
-                <button class="min-btn" style="background:#444" onclick="toggleDrawer(true)">⚙️ Options</button>
-            </div>
-
-            <div class="tools-row">
-                <div style="flex-grow: 1;">
-                    <label class="min-label">Zoom: <span id="zVal">1x</span></label>
-                    <input type="range" min="1" max="4" step="0.1" value="1" style="width:100%" oninput="updateZoom(this.value)">
-                </div>
-                <div style="flex-grow: 1;">
-                    <label class="min-label">Brush Size</label>
-                    <input type="range" id="sizeRange" min="5" max="80" value="30" style="width:100%">
-                </div>
-                <button class="min-btn" onclick="sendToBot()" style="background:#0088cc; color:white; padding: 10px; flex-grow: 0.5;">🔥 GENERATE</button>
-            </div>
+        <div class="tools-row">
+            <button id="moveBtn" class="toolbar-icon-btn" onclick="setMode('move')">🖐️</button>
+            <button id="brushBtn" class="toolbar-icon-btn active" onclick="setMode('brush')">🖌️</button>
+            <button id="eraseBtn" class="toolbar-icon-btn" onclick="setMode('erase')">🧽</button>
         </div>
+
+        <div class="tools-row" style="display: flex; gap: 8px;">
+            <button class="min-btn-sub" onclick="undo()">Undo</button>
+            <button class="min-btn-sub btn-clear" onclick="clearMask()">Clear</button>
+            <button class="min-btn-sub" onclick="toggleDrawer(true)">⚙️ Preferences</button>
+        </div>
+
+        <button class="generate-btn" onclick="sendToBot()">🔥 GENERATE RESULTS</button>
+        
+        <input type="range" id="sizeRange" min="5" max="100" value="30" style="width:100%; margin-top: 5px;">
+        <center><small style="color:#666; font-size: 9px;">BRUSH SIZE</small></center>
     </div>
 
     <div id="drawer-overlay" onclick="toggleDrawer(false)"></div>
     <div id="parameter-drawer">
-        <div style="width: 40px; height: 5px; background: #444; border-radius: 10px; margin: 0 auto 15px;"></div>
+        <div style="width: 30px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 10px; margin: 0 auto 20px;"></div>
         
-        <div class="param-group">
             <span class="param-label">Dress Type</span>
             <div class="chip-group">
                 <div class="chip selected" onclick="selectChip(this, 'style')">Nude</div>
@@ -156,7 +147,6 @@
             </div>
         </div>
 
-        <div class="param-group">
             <span class="param-label">Body Type</span>
             <div class="chip-group">
                 <div class="chip selected" onclick="selectChip(this, 'body')">Slim</div>
@@ -165,7 +155,6 @@
             </div>
         </div>
 
-        <div class="param-group">
             <span class="param-label">Breast Size</span>
             <div class="chip-group">
                 <div class="chip selected" onclick="selectChip(this, 'chest')">Small</div>
@@ -174,7 +163,7 @@
             </div>
         </div>
         
-        <button class="min-btn" style="width:100%; background:#0088cc; padding: 15px; color: white;" onclick="toggleDrawer(false)">APPLY SETTINGS</button>
+        <button class="apply-btn" onclick="toggleDrawer(false)">CONFIRM PREFERENCES</button>
     </div>
 
     <script>
@@ -242,11 +231,13 @@
 
         function setMode(m) {
             mode = m;
-            document.getElementById('moveBtn').className = 'min-btn ' + (m === 'move' ? 'active' : '');
-            document.getElementById('brushBtn').className = 'min-btn ' + (m === 'brush' ? 'active' : '');
-            document.getElementById('eraseBtn').className = 'min-btn ' + (m === 'erase' ? 'active' : '');
-            mCanvas.style.pointerEvents = m === 'move' ? 'none' : 'auto';
+            document.querySelectorAll('.toolbar-icon-btn').forEach(btn => btn.classList.remove('active'));
+            if(m === 'move') document.getElementById('moveBtn').classList.add('active');
+            if(m === 'brush') document.getElementById('brushBtn').classList.add('active');
+            if(m === 'erase') document.getElementById('eraseBtn').classList.add('active');
+            
             document.getElementById('viewport').style.overflow = (m === 'move') ? 'auto' : 'hidden';
+            document.getElementById('maskCanvas').style.pointerEvents = (m === 'move') ? 'none' : 'auto';
         }
 
         mCanvas.onpointerdown = (e) => {
