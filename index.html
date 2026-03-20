@@ -260,19 +260,40 @@
 
         function sendToBot() {
             if (credits <= 0) { alert("No credits left!"); return; }
+        
+            // 1. Prepare the Black & White Mask
+            const maskExport = document.createElement('canvas');
+            maskExport.width = pCanvas.width;
+            maskExport.height = pCanvas.height;
+            const meCtx = maskExport.getContext('2d');
+        
+            // Fill background with black (Area to stay the same)
+            meCtx.fillStyle = "black";
+            meCtx.fillRect(0, 0, maskExport.width, maskExport.height);
+        
+            // Draw the brush strokes in white (Area for AI to change)
+            // We use 'screen' or just draw the maskCanvas content
+            meCtx.drawImage(mCanvas, 0, 0);
+            
+            // Ensure all painted pixels are pure white
+            meCtx.globalCompositeOperation = 'source-in';
+            meCtx.fillStyle = "white";
+            meCtx.fillRect(0, 0, maskExport.width, maskExport.height);
+        
+            // 2. Reduce credits
             credits--;
             document.getElementById('credits-display').innerText = `Credits: ${credits}/20 left`;
-
-            const final = document.createElement('canvas');
-            final.width = mCanvas.width; final.height = mCanvas.height;
-            const fCtx = final.getContext('2d');
-            fCtx.drawImage(pCanvas, 0, 0);
-            fCtx.drawImage(mCanvas, 0, 0);
         
-            tg.sendData(JSON.stringify({
-                image: final.toDataURL("image/png"),
-                params: currentParams
-            }));
+            // 3. Package for Forge API
+            const payload = {
+                action: "inpaint",
+                original_image: pCanvas.toDataURL("image/jpeg", 0.9), // Base Photo
+                mask_image: maskExport.toDataURL("image/png"),       // B&W Mask
+                params: currentParams                                // Your chips
+            };
+        
+            // 4. Send to Telegram Bot
+            tg.sendData(JSON.stringify(payload));
         }
     </script>
 </body>
