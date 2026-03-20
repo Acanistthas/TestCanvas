@@ -4,104 +4,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; background: #0a0a0c; color: white; font-family: sans-serif; overflow: hidden; position: fixed; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; }
+        body { margin: 0; background: #121212; color: white; font-family: sans-serif; overflow: hidden; position: fixed; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; }
         
         /* Header Area */
         #bot-header {
-            width: 100%; height: 50px; display: flex; justify-content: space-between; align-items: center;
-            padding: 0 15px; box-sizing: border-box; background: rgba(26, 26, 26, 0.8); border-bottom: 1px solid #333;
+            width: 100%;
+            height: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            box-sizing: border-box;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
         }
         .bot-info { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 14px; }
         .bot-logo { width: 24px; height: 24px; background: #0088cc; border-radius: 50%; }
         .credits-box { font-size: 11px; color: #aaa; background: #2a2a2a; padding: 4px 10px; border-radius: 12px; }
 
-        /* Unified Editor UI Panel */
-        #editor-ui {
-            background: rgba(20, 20, 25, 0.7);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            padding: 15px;
-            margin-top: 10px;
-            width: 92%;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
         /* Upload Button */
-        #upload-btn { background: #1a1a1a; border: 2px dashed #444; padding: 60px 20px; width: 80%; margin-top: 50px; text-align: center; border-radius: 15px; cursor: pointer; }
+        #upload-btn { background: #222; border: 2px dashed #444; padding: 40px; width: 80%; margin-top: 50px; text-align: center; border-radius: 15px; cursor: pointer; }
 
         /* Editor Area */
-        #viewport { width: 100%; height: 50vh; border: 1px solid rgba(0, 136, 204, 0.3); position: relative; overflow: auto; background: #000; border-radius: 12px; touch-action: none; }
+        #viewport { width: 95vw; height: calc(100vh - 180px); margin: 5px auto; border: 2px solid #0088cc; position: relative; overflow: auto; background: #000; border-radius: 8px; touch-action: none; }
         canvas { position: absolute; top: 0; left: 0; transform-origin: top left; }
-
-        /* Icon Buttons (Move, Brush, Eraser) */
-        .toolbar-icon-btn {
-            flex: 1; padding: 12px;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white; font-size: 18px; cursor: pointer; transition: 0.2s;
-        }
-        .toolbar-icon-btn.active {
-            background: rgba(0, 136, 204, 0.2);
-            border-color: #0088cc;
-            box-shadow: 0 0 15px rgba(0, 136, 204, 0.4);
-        }
-
-        /* Sub Buttons (Undo, Clear, Adjust) */
-        .min-btn-sub {
-            flex: 1; padding: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #ccc; font-size: 11px; font-weight: 600;
-            text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer;
-        }
-        .btn-clear { color: #ff6666; border-color: rgba(255, 102, 102, 0.2); }
-
-        /* The Neo Generate Button */
-        .generate-btn {
-            width: 100%; padding: 16px;
-            background: linear-gradient(135deg, #00aaff 0%, #0066cc 100%);
-            border: none; border-radius: 14px;
-            color: white; font-weight: 800; font-size: 14px;
-            letter-spacing: 1.5px; cursor: pointer;
-            box-shadow: 0 4px 20px rgba(0, 102, 204, 0.5);
-            transition: transform 0.1s;
-        }
-        .generate-btn:active { transform: scale(0.97); }
-
+        
+        .min-tools { display: none; flex-direction: column; width: 95vw; gap: 5px; padding-bottom: 5px; }
+        .tools-row { display: flex; justify-content: space-between; gap: 5px; align-items: center; }
+        .min-btn { padding: 6px 2px; border: none; border-radius: 4px; background: #2a2a2a; color: #ccc; font-size: 10px; flex-grow: 1; text-align: center; cursor: pointer; }
+        .min-btn.active { background: #0088cc; color: white; font-weight: bold; }
+        .btn-clear { background: #600; }
+        .min-label { font-size: 10px; color: #999; display: block; }
+        
         /* Drawer Styles */
-        #parameter-drawer {
-            position: fixed; bottom: -100vh; left: 0; width: 100%; max-height: 85vh; 
-            background: rgba(15, 15, 20, 0.98); backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(0, 136, 204, 0.5); border-radius: 24px 24px 0 0;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 1000; padding: 24px; box-sizing: border-box;
-        }
+        #parameter-drawer { position: fixed; bottom: -100vh; left: 0; width: 100%; max-height: 80vh; background: #1c1c1c; border-top: 3px solid #0088cc; border-top-left-radius: 20px; border-top-right-radius: 20px; transition: bottom 0.3s ease-out; z-index: 1000; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         #parameter-drawer.open { bottom: 0; }
-        #drawer-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; }
-        
-        .param-label { color: #0088cc; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; display: block; }
-        .chip-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
-        .chip { 
-            padding: 8px 16px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; 
-            border: 1px solid rgba(255, 255, 255, 0.1); color: #999; font-size: 12px; cursor: pointer; 
-        }
-        .chip.selected { background: rgba(0, 136, 204, 0.2); border-color: #0088cc; color: white; box-shadow: 0 0 10px rgba(0,136,204,0.3); }
-        
-        /* Drawer Confirm Button */
-        .apply-btn {
-            width: 100%; padding: 14px; background: #0088cc; border: none; border-radius: 12px;
-            color: white; font-weight: bold; cursor: pointer; margin-top: 10px;
-        }
+        #drawer-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 999; }
+        .param-group { margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .param-label { display: block; font-size: 11px; color: #0088cc; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
+        .chip-group { display: flex; gap: 6px; flex-wrap: wrap; }
+        .chip { padding: 6px 12px; background: #333; border-radius: 15px; font-size: 10px; border: 1px solid #444; cursor: pointer; }
+        .chip.selected { background: #0088cc; border-color: white; color: white; }
     </style>
 </head>
 <body>
 
     <div id="bot-header">
-        <div class="bot-info"><div class="bot-logo"></div> <span>Nudiefie AI Bot</span></div>
+        <div class="bot-info">
+            <div class="bot-logo"></div> <span>Nudiefie AI Bot</span>
+        </div>
         <div id="credits-display" class="credits-box">Credits: 15/20 left</div>
     </div>
 
@@ -110,44 +61,47 @@
     </div>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
 
-    <div id="editor-ui" style="display:none;">
+    <div id="editor-ui" style="display:none; width: 100%; flex-direction: column; align-items: center;">
         <div id="viewport">
             <canvas id="photoCanvas"></canvas>
             <canvas id="maskCanvas"></canvas>
         </div>
 
-        <div class="tools-row">
-            <button id="moveBtn" class="toolbar-icon-btn" onclick="setMode('move')">🖐️</button>
-            <button id="brushBtn" class="toolbar-icon-btn active" onclick="setMode('brush')">🖌️</button>
-            <button id="eraseBtn" class="toolbar-icon-btn" onclick="setMode('erase')">🧽</button>
-        </div>
+        <div class="min-tools" id="compactTools">
+            <div class="tools-row">
+                <button id="moveBtn" class="min-btn" onclick="setMode('move')">🖐️ Move</button>
+                <button id="brushBtn" class="min-btn active" onclick="setMode('brush')">🖌️ Brush</button>
+                <button id="eraseBtn" class="min-btn" onclick="setMode('erase')">🧽 Erase</button>
+                <button id="undoBtn" class="min-btn" onclick="undo()">↩️ Undo</button>
+                <button class="min-btn btn-clear" onclick="clearMask()">🗑️ Clear</button>
+                <button class="min-btn" style="background:#444" onclick="toggleDrawer(true)">⚙️ Options</button>
+            </div>
 
-        <div class="tools-row" style="display: flex; gap: 8px;">
-            <button class="min-btn-sub" onclick="undo()">Undo</button>
-            <button class="min-btn-sub btn-clear" onclick="clearMask()">Clear</button>
-            <button class="min-btn-sub" onclick="toggleDrawer(true)">⚙️ Preferences</button>
+            <div class="tools-row">
+                <div style="flex-grow: 1;">
+                    <label class="min-label">Zoom: <span id="zVal">1x</span></label>
+                    <input type="range" min="1" max="4" step="0.1" value="1" style="width:100%" oninput="updateZoom(this.value)">
+                </div>
+                <div style="flex-grow: 1;">
+                    <label class="min-label">Brush Size</label>
+                    <input type="range" id="sizeRange" min="5" max="80" value="30" style="width:100%">
+                </div>
+                <button class="min-btn" onclick="sendToBot()" style="background:#0088cc; color:white; padding: 10px; flex-grow: 0.5;">🔥 GENERATE</button>
+            </div>
         </div>
-
-        <button class="generate-btn" onclick="sendToBot()">🔥 GENERATE RESULTS</button>
-        
-        <input type="range" id="sizeRange" min="5" max="100" value="30" style="width:100%; margin-top: 5px;">
-        <center><small style="color:#666; font-size: 9px;">BRUSH SIZE</small></center>
     </div>
 
     <div id="drawer-overlay" onclick="toggleDrawer(false)"></div>
     <div id="parameter-drawer">
-        <div style="width: 30px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 10px; margin: 0 auto 20px;"></div>
+        <div style="width: 40px; height: 5px; background: #444; border-radius: 10px; margin: 0 auto 15px;"></div>
         
         <div class="param-group">
             <span class="param-label">Dress Type</span>
             <div class="chip-group">
-                <div class="chip selected" onclick="selectChip(this, 'dress')">Nude</div>
-                <div class="chip" onclick="selectChip(this, 'dress')">Tattooed</div>
-                <div class="chip" onclick="selectChip(this, 'dress')">Bikini</div>
-                <div class="chip" onclick="selectChip(this, 'dress')">Lingerie</div>
-                <div class="chip" onclick="selectChip(this, 'dress')">Swimsuit</div>
-                <div class="chip" onclick="selectChip(this, 'dress')">Bodysuit</div>
-                
+                <div class="chip selected" onclick="selectChip(this, 'style')">Nude</div>
+                <div class="chip" onclick="selectChip(this, 'style')">Tattooed</div>
+                <div class="chip" onclick="selectChip(this, 'style')">Bikini</div>
+                <div class="chip" onclick="selectChip(this, 'style')">Lingerie</div>
             </div>
         </div>
 
@@ -157,48 +111,154 @@
                 <div class="chip selected" onclick="selectChip(this, 'body')">Slim</div>
                 <div class="chip" onclick="selectChip(this, 'body')">Normal</div>
                 <div class="chip" onclick="selectChip(this, 'body')">Athletic</div>
-                <div class="chip" onclick="selectChip(this, 'body')">Fat</div>
             </div>
         </div>
 
         <div class="param-group">
             <span class="param-label">Breast Size</span>
             <div class="chip-group">
-                <div class="chip selected" onclick="selectChip(this, 'breast')">Small</div>
-                <div class="chip" onclick="selectChip(this, 'breast')">Medium</div>
-                <div class="chip" onclick="selectChip(this, 'breast')">Big</div>
-                <div class="chip" onclick="selectChip(this, 'breast')">Huge</div>
+                <div class="chip selected" onclick="selectChip(this, 'chest')">Small</div>
+                <div class="chip" onclick="selectChip(this, 'chest')">Medium</div>
+                <div class="chip" onclick="selectChip(this, 'chest')">Big</div>
             </div>
         </div>
         
-        <div class="param-group">
-            <span class="param-label">Vagina Type</span>
-            <div class="chip-group">
-                <div class="chip selected" onclick="selectChip(this, 'vagina')">Normal</div>
-                <div class="chip" onclick="selectChip(this, 'vagina')">Hairy</div>
-                <div class="chip" onclick="selectChip(this, 'vagina')">Shaved</div>
-                <div class="chip" onclick="selectChip(this, 'vagina')">Brazillian</div>
-            </div>
-        </div>
-
-        <button class="apply-btn" onclick="toggleDrawer(false)">CONFIRM PREFERENCES</button>
+        <button class="min-btn" style="width:100%; background:#0088cc; padding: 15px; color: white;" onclick="toggleDrawer(false)">APPLY SETTINGS</button>
     </div>
 
     <script>
-        // ... (Keep your existing JavaScript logic from the previous message here) ...
-        // Ensure you keep the setMode function to update the .active classes!
+        let currentParams = { body: "Slim", chest: "Small", style: "Nude" };
+        let credits = 15;
+
+        function toggleDrawer(show) {
+            const drawer = document.getElementById('parameter-drawer');
+            const overlay = document.getElementById('drawer-overlay');
+            drawer.classList.toggle('open', show);
+            overlay.style.display = show ? 'block' : 'none';
+        }
+
+        function selectChip(el, group) {
+            el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            currentParams[group] = el.innerText;
+        }
+
+        const tg = window.Telegram.WebApp;
+        const pCanvas = document.getElementById('photoCanvas');
+        const mCanvas = document.getElementById('maskCanvas');
+        const pCtx = pCanvas.getContext('2d');
+        const mCtx = mCanvas.getContext('2d');
+
+        let drawing = false, mode = 'brush', zoom = 1, history = [];
+        let lastX, lastY;
+
+        document.getElementById('fileInput').onchange = (e) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    document.getElementById('upload-btn').style.display = 'none';
+                    document.getElementById('editor-ui').style.display = 'flex';
+                    document.getElementById('compactTools').style.display = 'flex';
+                    
+                    const viewport = document.getElementById('viewport');
+                    const screenWidth = viewport.clientWidth;
+                    const internalW = 1024; 
+                    const ratio = internalW / img.width;
+                    const internalH = img.height * ratio;
+                    
+                    [pCanvas, mCanvas].forEach(c => {
+                        c.width = internalW;
+                        c.height = internalH;
+                        c.style.width = screenWidth + "px";
+                        c.style.height = (internalH * (screenWidth / internalW)) + "px";
+                    });
+
+                    pCtx.drawImage(img, 0, 0, internalW, internalH);
+                    saveState();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        };
+
+        function updateZoom(v) {
+            zoom = v;
+            document.getElementById('zVal').innerText = v + "x";
+            pCanvas.style.transform = `scale(${v})`;
+            mCanvas.style.transform = `scale(${v})`;
+        }
+
         function setMode(m) {
             mode = m;
-            document.querySelectorAll('.toolbar-icon-btn').forEach(btn => btn.classList.remove('active'));
-            if(m === 'move') document.getElementById('moveBtn').classList.add('active');
-            if(m === 'brush') document.getElementById('brushBtn').classList.add('active');
-            if(m === 'erase') document.getElementById('eraseBtn').classList.add('active');
-            
+            document.getElementById('moveBtn').className = 'min-btn ' + (m === 'move' ? 'active' : '');
+            document.getElementById('brushBtn').className = 'min-btn ' + (m === 'brush' ? 'active' : '');
+            document.getElementById('eraseBtn').className = 'min-btn ' + (m === 'erase' ? 'active' : '');
+            mCanvas.style.pointerEvents = m === 'move' ? 'none' : 'auto';
             document.getElementById('viewport').style.overflow = (m === 'move') ? 'auto' : 'hidden';
-            document.getElementById('maskCanvas').style.pointerEvents = (m === 'move') ? 'none' : 'auto';
         }
+
+        mCanvas.onpointerdown = (e) => {
+            if (mode === 'move') return;
+            drawing = true;
+            saveState();
+            const rect = mCanvas.getBoundingClientRect();
+            lastX = (e.clientX - rect.left) * (mCanvas.width / rect.width);
+            lastY = (e.clientY - rect.top) * (mCanvas.height / rect.height);
+        };
+
+        mCanvas.onpointermove = (e) => {
+            if (!drawing || mode === 'move') return;
+            const rect = mCanvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (mCanvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (mCanvas.height / rect.height);
+
+            mCtx.lineWidth = document.getElementById('sizeRange').value;
+            mCtx.lineCap = 'round'; mCtx.lineJoin = 'round';
+            mCtx.globalCompositeOperation = mode === 'brush' ? 'source-over' : 'destination-out';
+            mCtx.strokeStyle = '#ffffff';
+
+            mCtx.beginPath();
+            mCtx.moveTo(lastX, lastY);
+            mCtx.lineTo(x, y);
+            mCtx.stroke();
+            lastX = x; lastY = y;
+        };
+
+        window.onpointerup = () => drawing = false;
+
+        function saveState() { 
+            history.push(mCanvas.toDataURL()); 
+            if(history.length > 15) history.shift(); 
+        }
+
+        function undo() { 
+            if(history.length > 1) { 
+                history.pop(); 
+                let i = new Image(); 
+                i.onload = () => { mCtx.clearRect(0,0,mCanvas.width,mCanvas.height); mCtx.drawImage(i,0,0); }; 
+                i.src = history[history.length-1]; 
+            } 
+        }
+
+        function clearMask() { mCtx.clearRect(0,0,mCanvas.width,mCanvas.height); saveState(); }
+
+        function sendToBot() {
+            if (credits <= 0) { alert("No credits left!"); return; }
+            credits--;
+            document.getElementById('credits-display').innerText = `Credits: ${credits}/20 left`;
+
+            const final = document.createElement('canvas');
+            final.width = mCanvas.width; final.height = mCanvas.height;
+            const fCtx = final.getContext('2d');
+            fCtx.drawImage(pCanvas, 0, 0);
+            fCtx.drawImage(mCanvas, 0, 0);
         
-        // ... rest of your canvas scripts ...
+            tg.sendData(JSON.stringify({
+                image: final.toDataURL("image/png"),
+                params: currentParams
+            }));
+        }
     </script>
 </body>
 </html>
