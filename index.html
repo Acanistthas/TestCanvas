@@ -21,6 +21,14 @@
         .bot-info { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 14px; }
         .bot-logo { width: 24px; height: 24px; background: #0088cc; border-radius: 50%; }
         .credits-box { font-size: 11px; color: #aaa; background: #2a2a2a; padding: 4px 10px; border-radius: 12px; }
+        #editor-ui {
+            background: rgba(20, 20, 25, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 10px;
+            margin-top: 5px;
+        }
 
         /* Upload Button */
         #upload-btn { background: #222; border: 2px dashed #444; padding: 40px; width: 80%; margin-top: 50px; text-align: center; border-radius: 15px; cursor: pointer; }
@@ -29,11 +37,67 @@
         #viewport { width: 95vw; height: calc(100vh - 180px); margin: 5px auto; border: 2px solid #0088cc; position: relative; overflow: auto; background: #000; border-radius: 8px; touch-action: none; }
         canvas { position: absolute; top: 0; left: 0; transform-origin: top left; }
         
-        .min-tools { display: none; flex-direction: column; width: 95vw; gap: 5px; padding-bottom: 5px; }
+        .min-tools button,
+        .min-btn-sub {
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.03); 
+            border-radius: 8px; 
+            font-size: 11px; 
+            color: #999;
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+            transition: all 0.2s ease;
+            cursor: pointer;
+            text-transform: capitalize; /* Optional: keeps them from being all-caps */
+            letter-spacing: 0.5px;
+        }
+        .btn-clear {
+            background: rgba(100, 0, 0, 0.2); 
+            border-color: rgba(100, 0, 0, 0.5);
+            color: #ffaa99;
+        }
+        .min-btn-sub:hover,
+        .min-btn-sub.active {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+        .toolbar-icon-btn {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 50%; /* Circle look from image_8.png */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 18px; /* Larger icon size */
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .toolbar-icon-btn.active {
+            background: rgba(0, 136, 204, 0.15); 
+            border-color: #0088cc; 
+            color: #fff; 
+            box-shadow: 0 0 15px rgba(0, 136, 204, 0.3);
+        }
         .tools-row { display: flex; justify-content: space-between; gap: 5px; align-items: center; }
-        .min-btn { padding: 6px 2px; border: none; border-radius: 4px; background: #2a2a2a; color: #ccc; font-size: 10px; flex-grow: 1; text-align: center; cursor: pointer; }
-        .min-btn.active { background: #0088cc; color: white; font-weight: bold; }
-        .btn-clear { background: #600; }
+        .generate-btn {
+            width: 100%;
+            /* Use the same gradient and glow as the drawer's Confirm button */
+            background: linear-gradient(135deg, #0088cc, #005588);
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            letter-spacing: 1px;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(0, 136, 204, 0.4);
+            cursor: pointer;
+            /* Optional: subtle scaling on hover for interaction */
+            transition: transform 0.1s ease-out;
+        }
+        
+        .generate-btn:active {
+            transform: scale(0.98); /* Depress effect when clicked */
+        }
         .min-label { font-size: 10px; color: #999; display: block; }
         
         /* Drawer Styles */
@@ -114,27 +178,24 @@
         </div>
 
         <div class="min-tools" id="compactTools">
-            <div class="tools-row">
-                <button id="moveBtn" class="min-btn" onclick="setMode('move')">🖐️ Move</button>
-                <button id="brushBtn" class="min-btn active" onclick="setMode('brush')">🖌️ Brush</button>
-                <button id="eraseBtn" class="min-btn" onclick="setMode('erase')">🧽 Erase</button>
-                <button id="undoBtn" class="min-btn" onclick="undo()">↩️ Undo</button>
-                <button class="min-btn btn-clear" onclick="clearMask()">🗑️ Clear</button>
-                <button class="min-btn" style="background:#444" onclick="toggleDrawer(true)">⚙️ Adjust Preferences</button>
+            <div class="tools-row" style="margin-bottom: 10px;">
+                <button id="moveBtn" class="toolbar-icon-btn" onclick="setMode('move')">🖐️</button>
+                <button id="brushBtn" class="toolbar-icon-btn active" onclick="setMode('brush')">🖌️</button>
+                <button id="eraseBtn" class="toolbar-icon-btn" onclick="setMode('erase')">🧽</button>
             </div>
-
+    
             <div class="tools-row">
-                <div style="flex-grow: 1;">
-                    <label class="min-label">Zoom: <span id="zVal">1x</span></label>
-                    <input type="range" min="1" max="4" step="0.1" value="1" style="width:100%" oninput="updateZoom(this.value)">
-                </div>
-                <div style="flex-grow: 1;">
-                    <label class="min-label">Brush Size</label>
-                    <input type="range" id="sizeRange" min="5" max="80" value="30" style="width:100%">
-                </div>
-                <button class="min-btn" onclick="sendToBot()" style="background:#0088cc; color:white; padding: 10px; flex-grow: 0.5;">🔥 GENERATE</button>
+                <button id="undoBtn" class="min-btn-sub" onclick="undo()">Undo</button>
+                <button class="min-btn-sub btn-clear" onclick="clearMask()">Clear</button>
+                <button class="min-btn-sub" onclick="toggleDrawer(true)">⚙️ Adjust Preferences</button>
             </div>
+    
+            <div class="tools-row" style="display: block; margin-top: 5px;">
+                </div>
+            
+            <button class="generate-btn" onclick="sendToBot()">🔥 GENERATE</button>
         </div>
+    </div>
     </div>
 
     <div id="drawer-overlay" onclick="toggleDrawer(false)"></div>
