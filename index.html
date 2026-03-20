@@ -307,35 +307,31 @@
         
             try {
                 const maskExport = document.createElement('canvas');
-                maskExport.width = pCanvas.width;
-                maskExport.height = pCanvas.height;
+                // We shrink the mask significantly to ensure it passes the Telegram limit
+                maskExport.width = 512; 
+                maskExport.height = (512 * pCanvas.height) / pCanvas.width;
+                
                 const meCtx = maskExport.getContext('2d');
                 meCtx.fillStyle = "black";
                 meCtx.fillRect(0, 0, maskExport.width, maskExport.height);
-                meCtx.drawImage(mCanvas, 0, 0);
+                meCtx.drawImage(mCanvas, 0, 0, maskExport.width, maskExport.height);
                 meCtx.globalCompositeOperation = 'source-in';
                 meCtx.fillStyle = "white";
                 meCtx.fillRect(0, 0, maskExport.width, maskExport.height);
         
                 const payload = {
-                    original_image: pCanvas.toDataURL("image/jpeg", 0.6), // Low quality to fit TG limits
+                    // We NO LONGER send the original_image here to save space
                     mask_image: maskExport.toDataURL("image/png"),
                     params: currentParams
                 };
         
                 const jsonPayload = JSON.stringify(payload);
         
-                // If payload > 120KB, it will likely fail in Telegram
-                if (jsonPayload.length > 125000) {
-                    document.getElementById('loading-overlay').style.display = 'none';
-                    alert("Image too large for Telegram! Size: " + Math.round(jsonPayload.length/1024) + "KB. Try a smaller crop.");
-                    return;
-                }
+                // Debug: Check size in console
+                console.log("Payload size:", jsonPayload.length);
         
-                // Send to Bot
+                // Fire to Bot
                 tg.sendData(jsonPayload);
-                
-                // Give it a split second to send before closing
                 setTimeout(() => { tg.close(); }, 500);
         
             } catch (e) {
