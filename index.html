@@ -299,44 +299,49 @@
 
         function clearMask() { mCtx.clearRect(0,0,mCanvas.width,mCanvas.height); saveState(); }
 
-        function sendToBot() {
-            if (credits <= 0) { alert("No credits left!"); return; }
-        
-            // Show the Loading Overlay
-            document.getElementById('loading-overlay').style.display = 'flex';
+        async function sendToBot() {
+            // 1. Show the "Processing" Popup
+            const popup = document.getElementById('loading-overlay');
+            popup.style.display = 'flex';
         
             try {
-                const maskExport = document.createElement('canvas');
-                // We shrink the mask significantly to ensure it passes the Telegram limit
-                maskExport.width = 512; 
-                maskExport.height = (512 * pCanvas.height) / pCanvas.width;
+                // 2. Prepare the Mask
+                const maskCanvas = document.createElement('canvas');
+                maskCanvas.width = pCanvas.width;
+                maskCanvas.height = pCanvas.height;
+                const mctx = maskCanvas.getContext('2d');
+                mctx.fillStyle = "black";
+                mctx.fillRect(0,0, maskCanvas.width, maskCanvas.height);
+                mctx.drawImage(mCanvas, 0, 0); // Your painted mask
                 
-                const meCtx = maskExport.getContext('2d');
-                meCtx.fillStyle = "black";
-                meCtx.fillRect(0, 0, maskExport.width, maskExport.height);
-                meCtx.drawImage(mCanvas, 0, 0, maskExport.width, maskExport.height);
-                meCtx.globalCompositeOperation = 'source-in';
-                meCtx.fillStyle = "white";
-                meCtx.fillRect(0, 0, maskExport.width, maskExport.height);
-        
+                // 3. Prepare Payload
                 const payload = {
-                    // We NO LONGER send the original_image here to save space
-                    mask_image: maskExport.toDataURL("image/png"),
-                    params: currentParams
+                    "init_images": [pCanvas.toDataURL("image/jpeg", 0.7).split(',')[1]],
+                    "mask": maskCanvas.toDataURL("image/png").split(',')[1],
+                    "prompt": `photorealistic, ${currentParams.style}, ${currentParams.body} body`,
+                    "negative_prompt": "clothes, fabric, blurry",
+                    "steps": 20
                 };
         
-                const jsonPayload = JSON.stringify(payload);
+                // 4. Send to Forge API (Replace with your Public Ngrok URL)
+                const FORGE_URL = "https://YOUR-NGROK-ID.ngrok-free.app/sdapi/v1/img2img";
+                
+                const response = await fetch(FORGE_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
         
-                // Debug: Check size in console
-                console.log("Payload size:", jsonPayload.length);
-        
-                // Fire to Bot
-                tg.sendData(jsonPayload);
-                setTimeout(() => { tg.close(); }, 500);
+                if (response.ok) {
+                    alert("Success! Your image is being generated. Check the bot chat for the result.");
+                    window.Telegram.WebApp.close();
+                } else {
+                    throw new Error("Forge was busy or offline.");
+                }
         
             } catch (e) {
-                document.getElementById('loading-overlay').style.display = 'none';
-                alert("App Error: " + e.message);
+                popup.style.display = 'none';
+                alert("Error: " + e.message);
             }
         }
     </script>
